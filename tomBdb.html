@@ -1,0 +1,4007 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+ 
+<title>Base de données version 1.7 delta</title>
+
+<style>
+        body {
+		background-color: #202020;
+		color: #D1D1D1;
+            	font-family: Arial, size: 22px;
+        }
+	
+		input {
+			background-color: black;
+			color: white;
+           	font-family: Arial;
+			font-size: 22px;
+			mouse-color: blue;
+			mouse-size: 30px;
+		}
+		
+		select {
+			font-size: 18px;
+			padding: 8px;
+			border-radius: 6px;
+			background-color: #f0f0f0;
+		}	
+
+		input:hover {
+			background-color: black;
+			color: white;
+            font-family: Arial;
+			font-size: 22px;
+		}
+
+		
+		button {
+			background-color: yellow;
+			color: black;
+			border: 1;
+            font-family: Arial;
+			font-size: 22px;
+
+		}
+
+		table {
+			background-color: black;
+			color: white;
+			border: 1;
+            font-family: Arial;
+			font-size: 22px;
+		}
+			
+
+
+		button:hover {
+			background-color: blue;
+			color: white;
+			//border: 1;
+            font-family: Arial;
+			font-size: 22px;
+		}
+
+		tr:hover {
+			background-color: green;
+			color: yellow;
+			//border: 1;
+            font-family: Arial;
+			font-size: 22px;
+		}
+
+		td:hover {
+			background-color: green;
+			color: yellow;
+			border: 1;
+            font-family: Arial;
+			font-size: 22px;
+		}
+
+
+		p {
+			font-size: 22px;
+            font-family: Arial;
+		}
+		
+		a {
+			background-color: black;
+			color: orange;
+            font-family: Arial;
+		}
+
+	
+.emoji {
+  font-size: 3em;
+  margin-right: 5px;
+}
+
+</style>
+
+
+</head>
+
+
+
+<header>
+    <h1>tomBdd.html Base de données relationnelle en dev. version 1.6 fox.</h1>
+</header>
+
+
+
+
+<body onload="startSystem();">
+
+<script>
+
+var indexedDB;
+var IDBTransaction;
+var IDBKeyRange;
+
+var db;
+
+const codeVersion="golf";
+const baseNamePrefix="leRepaire"+"_"+codeVersion;
+var version=1;
+
+var baseFullName="";
+
+var currentTable=0;
+var jsonGlobal=[];
+
+var tablesMod=[
+	{"nom":"table","etiquette":"Table", "commentaire":"Magasin d'objet"},
+	{"nom":"champ","etiquette":"Champ", "commentaire":"Champ(s) de table"},
+	{"nom":"lien","etiquette":"Lien", "commentaire":"Lien de table à table, et/ou de champ à champ"},
+	{"nom":"liste","etiquette":"Liste", "commentaire":"Liste d'option à choix unique"}
+	];
+
+var fieldsMod=[[]];
+
+fieldsMod[0]=[
+	{"nom":"nom","etiquette":"Nom","type":"texte","indexer":"oui","unique":"oui"},
+	{"nom":"etiquette","etiquette":"Etiquette","type":"texte","indexer":"oui","unique":"oui"},
+	{"nom":"commentaire","etiquette":"Commentaire","type":"texte","indexer":"non","unique":"non"}
+];
+
+fieldsMod[1]=[
+	{"nom":"nom","etiquette":"Nom","type":"texte","indexer":"oui","unique":"non"},
+	{"nom":"etiquette","etiquette":"Etiquette","type":"texte","indexer":"oui","unique":"non"},
+	{"nom":"type","etiquette":"Type","type":"texte","indexer":"non","unique":"non"},
+	{"nom":"indexer","etiquette":"Indexer","type":"texte","indexer":"non","unique":"non"},
+	{"nom":"unique","etiquette":"Unique","type":"texte", "indexer":"non","unique":"non"},
+	{"nom":"commentaire","etiquette":"Commentaire","type":"texte","indexer":"non","unique":"non"},
+	{"nom":"versTable","etiquette":"Vers la table (pour lier un champ à une table)","type":"texte","indexer":"oui","unique":"non"}
+];
+
+fieldsMod[2]=[
+	{"nom":"nom","etiquette":"Nom","type":"texte","indexer":"oui","unique":"oui"},
+	{"nom":"etiquette","etiquette":"Libellé","type":"texte","indexer":"oui","unique":"oui"},
+	{"nom":"lienDepuisTable","etiquette":"Lien depuis une table","type":"texte","indexer":"oui","unique":"non"},
+	{"nom":"listeClefCsvLienDepuisChamp","etiquette":"Liste de clef Csv de liens depuis champ","type":"texte","indexer":"oui","unique":"non"},
+	{"nom":"lienVersTable","etiquette":"Lien vers une table","type":"texte","indexer":"oui","unique":"non"},
+	{"nom":"listeClefCsvLienVersChamp","etiquette":"Liste de clef Csv de lien vers un champ","type":"texte","indexer":"oui","unique":"non"},
+	{"nom":"commentaire","etiquette":"Commentaire","type":"texte","indexer":"non","unique":"non"}
+];
+
+
+fieldsMod[3]=[
+	{"nom":"nom","etiquette":"Nom","type":"texte","indexer":"oui","unique":"oui"},
+	{"nom":"etiquette","etiquette":"Libellé","type":"texte","indexer":"oui","unique":"oui"},
+	{"nom":"listeOptionNom","etiquette":"Liste des options de nom","type":"texte","indexer":"non","unique":"non"},
+	{"nom":"listeOptionEtiquette","etiquette":"Liste des options d'étiquette","type":"texte","indexer":"non","unique":"non"}
+];
+
+var modOrRef=[{"nom":"model","etiquette":"Modèle"},
+			  {"nom":"definition", "etiquette":"Définition"}
+];
+var currentSelect=0;
+
+var tablesRef=[];
+var fieldsRef=[[]];
+
+var tablesNbr=0;
+
+var tablesPreCount=0;
+var fieldsPreCount=[0];
+var countPre=0;
+var tablesList=[];
+var refTable="";
+var refField="";
+var tableCounter=0;
+var table=0;
+var lines=[];
+var line=0;
+var tablesLen=0;
+var rows=[];
+var row=0;
+var linesLen=0;
+var flag=false;
+var sep="";
+
+const maxList=20;
+const maxMsg=100;
+var userLogin="Thomas";
+
+const prefixStore="";
+const prefixForm="";
+const prefixIndex="index_";
+
+const sepImport=';';
+const sepExport=';';
+const splitChar='\n';
+const q="\"";					//double quote
+const sQ="'";					//simple quote
+
+const MAXID=500000;	// Nombre maximum de fiches dans une table (donnée arbitraire)
+const MAX_SEARCH=10;
+var lastPercentUsed;
+var ttsOn=true;
+
+
+var count=0;
+var strJson="";
+var descLen=0;
+var tabJson=[];
+var tabLine=[];
+var tabField=[];
+var flagContinue=false;
+var result="";
+var text="";
+//var nameField;
+var formValue;
+var storeField;
+var fileReader;
+var lastChunk;
+var slice;
+var docJson;
+var request;
+var countLines=0;
+var countContent=0;
+
+var instanceFound=false;
+var researchFound=false;
+var addGranted=true;
+
+var prioList=[];
+var fileContent=[];
+var fileContentLength=0;
+var fileContentIndice=0;
+var monContenu="";
+
+var msgList=[];
+var countMsg=0;
+var baseInit=false;
+var reloadFlag=true;
+
+
+const url=document.location;
+var ttsOn=true;
+var lastTalk="";
+var lastDisp="";
+var latLast=0.0;
+var lonLast=0.0;
+var formLat=0.0;
+var formLon=0.0;
+
+var selectModOrRef=0;
+var NbrOfRowMax=100;		// Nombre maximum de champs dans une table.
+		
+
+
+
+async function startSystem(){
+
+	navOnline();
+	
+	loadMod();
+
+	currentSelect=0;
+	currentTable=0;
+
+	initDb();
+
+	chooseTable();
+	chooseSelect();
+
+	formWrite();
+	buttonDisplay();
+
+}
+
+
+
+
+
+
+function chooseSelect(){
+
+	var descTable=0;
+
+	var resHtml="";
+	for(var noModRef in modOrRef){
+		if(noModRef==0){
+			resHtml+="<hr></hr><h2><p>Choix entre le modèle et la définition : </p></h2>";
+			resHtml+="<table border='1'><p><tr>";
+		}
+		if(currentSelect==noModRef){
+			var selectLabel=modOrRef[noModRef].etiquette;
+			resHtml+="<td>";
+			resHtml+="<p><h2><label class='blink'>"+selectLabel+"</label></h2></p>";
+			resHtml+="</td>";
+		}else{
+			var selectLabel=modOrRef[noModRef].etiquette;
+			resHtml+="<td>";
+			resHtml+="<p><h3><button onclick='currentSelect="+noModRef+"; currentTable=0; selectChange();'>"+selectLabel+"</button></h3></p>";
+			resHtml+="</td>";
+		}
+		descTable++;
+
+	}
+	if(descTable){
+		resHtml+="</tr></p></table>";
+		dispDiv("chooseSelect", resHtml);
+	}
+}
+
+
+function loadDef(){
+	tablesRef=tablesDef;
+	fieldsRef=fieldsDef;
+}
+
+
+
+
+
+async function chooseTable() {
+    var descTable = 0;
+    var resHtml = "";
+
+    for (var tableNo in tablesRef) {
+        var tableLabel = tablesRef[tableNo].etiquette;
+
+        if (tableNo == 0) {
+            var selectLabel = modOrRef[currentSelect].etiquette;
+            resHtml += "<hr></hr><h2><p>Choix de la table de " + selectLabel + ".</p></h2>";
+            resHtml += "<table border='1'><p><tr>";
+        }
+
+        if (currentTable == tableNo) {
+	        resHtml += "<td>";
+            resHtml += "<p><h2><label class='blink'>" + tableLabel + "</label></p></h2>";
+            resHtml += "</td>";
+        } else {
+            resHtml += "<td>";
+            resHtml += "<p><h3><button onclick='currentTable=" + tableNo + "; tableChange()'>" + tableLabel + "</button></h3></p>";
+            resHtml += "</td>";
+        }
+
+        descTable++;
+    }
+
+    if (descTable) {
+        resHtml += "</tr></p></table>";
+        dispDiv("chooseTable", resHtml);
+    }
+}
+
+
+
+
+
+
+async function selectChange(){
+	
+	if(currentSelect==1){
+
+		getRefFromDatabaseAsync();
+		
+		chooseSelect();
+
+		currentTable=0;
+		await chooseTable();
+
+
+		btnResetResearch();
+
+		formWrite();
+		buttonDisplay();
+
+	}else if(currentSelect==0){
+
+		loadMod();
+		//initDb();
+		
+		currentTable=0;
+		var tableName=tablesRef[currentTable].nom
+
+
+		chooseSelect();
+		await chooseTable();
+		formWrite();
+		buttonDisplay();
+	}	
+}
+
+
+
+
+
+async function tableChange(){
+	
+	formWrite();
+	buttonDisplay();
+
+	await chooseTable();
+}
+
+
+
+
+
+// Utilitaire: suppression de base avec promesse et délai de sécurité
+
+function deleteDatabaseAwait(dbName, { timeout = 15000 } = {}) {
+  return new Promise((resolve, reject) => {
+
+	//attendre(true, "Suppression de la base de données");
+
+    const req = indexedDB.deleteDatabase(dbName);
+
+    const timer = setTimeout(() => {
+      reject(new Error(`Suppression bloquée trop longtemps pour '${dbName}'.`));
+    }, timeout);
+
+    req.onblocked = () => {
+      // Une autre connexion est ouverte (autre onglet/instance)
+      disp(`⚠️ Suppression bloquée : la base '${dbName}' est encore utilisée par une autre connexion.`);
+    };
+
+    req.onerror = (e) => {
+      clearTimeout(timer);
+      reject(e.target?.error || new Error(`Erreur lors de la suppression de '${dbName}'.`));
+    };
+
+    req.onsuccess = () => {
+      clearTimeout(timer);
+      document.url=document.url;
+      resolve();
+    };
+  });
+}
+
+
+
+
+
+
+function attendre(show, texte) {
+  const id = 'message-patience';
+
+  if (show) {
+    // Vérifie si le message existe déjà
+    if (!document.getElementById(id)) {
+      const div = document.createElement('div');
+      div.id = id;
+      div.textContent = "PATIENTER : "+texte;
+      Object.assign(div.style, {
+        position: 'fixed',
+        top: '0',
+        left: '0',
+        width: '100%',
+        padding: '15px',
+        backgroundColor: 'blue',
+        color: 'yellow',
+        fontSize: '30px',
+        fontWeight: 'bold',
+        textAlign: 'center',
+        zIndex: '9999',
+        fontFamily: 'Arial, sans-serif'
+      });
+      document.body.appendChild(div);
+    }
+  } else {
+    const existing = document.getElementById(id);
+    if (existing) {
+      existing.remove();
+    }
+  }
+}
+
+
+
+
+
+
+/*=====================
+CLEAR THE CURRENT TABLE
+=====================*/
+
+function btnClearCurrentTable(){
+
+	var tableName=tablesRef[currentTable].nom;
+	var tableLabel=tablesRef[currentTable].etiquette;
+	//attendre(true, "Effacement de la table : "+tableLabel);
+
+
+	closeDb();
+	baseFullName = baseNamePrefix;
+	var request = indexedDB.open(baseFullName);
+	request.onerror = (e) => disp("❌ Impossible d'ouvrir la BDD. "+e.message);
+	request.onsuccess = (e) => {
+		var db = e.target.result;
+
+		try{
+			var transaction = db.transaction(tableName, "readwrite");
+			var objectStore = transaction.objectStore(tableName);
+			var clearRequest = objectStore.clear();
+		}catch(e){
+			//disp("Veillez à créer un référentiel.");
+			return;
+		}
+		clearRequest.onsuccess = function(event) {
+			disp("Table effaçée.");
+			chooseTable();
+			//attendre(false, "");
+		};
+		clearRequest.onerror = function(event) {
+			//disp("Erreur lors de effacement : "+event.message);
+		};
+	};
+}
+
+
+/*======================
+DELETE THE CURRENT TABLE
+======================*/
+
+function btnDeleteCurrentTable(){
+}
+
+
+
+
+
+
+/*
+===========================================================
+Lecture de la quantité de données utilisée restante en base
+===========================================================
+*/
+function getDbUsed(){
+	
+	navigator.storage.estimate().then(function(estimate) {
+		var estimateUsage=estimate.usage;
+		var estimateQuota=estimate.quota;
+		var percentUsed=(estimateUsage / (estimateQuota)*100).toFixed(2);
+		if(lastPercentUsed!==percentUsed){
+			disp("Données utilisées : "+(estimateUsage/1000000).toFixed(2)+" Mo");
+			disp("Données maximum : "+(estimateQuota/1000000000).toFixed(2)+" Go");
+			disp("Pourcentage de données utilisées : "+percentUsed+" %");
+		}
+		lastPercentUsed=percentUsed;
+		if(percentUsed>50.0){
+			disp("Attention masse critique pourcent dépassant 50 % la taille allouée pour la base de données.");
+		}
+	});
+}
+
+
+
+
+
+
+
+
+
+
+
+
+function btnClearIdLabel(){
+	dispDiv("idLabel", "");
+}
+	
+	
+	
+	
+	
+function setIdLabel(idLabel){
+	dispDiv("idLabel", idLabel);
+}
+	
+	
+
+
+
+
+
+function  btnClearLastMsg(){
+	dispDiv("lastMsg", "");
+}
+
+
+
+
+function closeDb(){
+	try{
+		db.close();
+	}catch(e){
+		return;
+	}
+
+	db={};
+}			
+
+function closeDbName(name){
+	try{
+		const tempReq = indexedDB.open(name);
+		tempReq.onsuccess = (e) => {
+			var dbTemp = e.target.result;
+			dbTemp.close();
+		};
+		disp("Fermeture de la base réussi.");
+		return({});
+	}catch(e){
+		disp("Fermeture de la base en erreur : "+e.message);
+		return;
+	}
+}			
+
+
+function dispDiv(div, m){
+	var messageDiv=document.getElementById(div);
+	if(messageDiv){
+		messageDiv.innerHTML=m;
+	}
+}
+
+
+
+
+window.onerror = function(msg, url, line) {
+	if (onerror.num++ < 10) {
+		disp("Erreur dans la page : " + msg + "\n" + url + ":" + line);
+		disp("sur la table courante : "+tablesRef[currentTable].etiquette);
+		mailTo("vassiliefft@gmail.com", "tomBdb.html", "Erreur dans la page "+url + ",  msg : "+ msg+ ", ligne : "+line+". Sur la table courante : "+tablesRef[currentTable].etiquette);
+	}
+}
+onerror.max = 3;
+onerror.num = 0;
+
+
+
+
+
+function testIndexeddb(){
+
+    indexedDB = window.indexedDB || window.webkitIndexedDB || window.mozIndexedDB || window.msIndexedDB;
+    IDBTransaction = window.IDBTransaction || window.webkitIDBTransaction;
+    IDBKeyRange = window.IDBKeyRange || window.webkitIDBKeyRange || window.msIDBKeyRange;
+
+    if(!indexedDB){
+         return false;    
+    }
+    if(!IDBTransaction){
+          return false;
+    }
+
+    if(!IDBKeyRange){
+       return false;
+    }
+    return true;
+}
+
+
+/*function openDB(name, version) {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(name, version);
+
+    req.onerror = evt => reject(evt);
+
+    req.onblocked = () => {
+      // Une autre connexion empêche la mise à jour
+      // action possible: informer l'utilisateur ou tenter une nouvelle ouverture après délai
+      console.warn('indexedDB open blocked: une autre connexion empêche la mise à jour');
+    };
+
+    req.onsuccess = evt => {
+      const db = evt.target.result;
+      // fermer automatiquement si une autre page demande un changement de version
+      db.onversionchange = () => {
+        try { db.close(); } catch (e) {}
+        console.warn('Connexion fermée suite à versionchange');
+      };
+      resolve(db);
+    };
+
+    req.onupgradeneeded = evt => {
+      const db = evt.target.result;
+      // initialisation / migrations si nécessaire
+    };
+  });
+}*/
+
+
+
+
+
+
+/*
+
+async function initDb() {
+  const openDb = (name, version) => new Promise((resolve, reject) => {
+    const req = indexedDB.open(name, version);
+    req.onsuccess = e => {
+      const db = e.target.result;
+      db.onversionchange = () => {
+        disp("Version change détectée, fermeture.");
+        db.close();
+      };
+      resolve(db);
+    };
+    req.onerror = e => reject(e.target.error);
+    req.onblocked = e => {
+	
+	  closeAllDb();
+	
+      disp("Ouverture bloquée par une autre connexion.");
+      alert("Veuillez fermer les autres onglets ou instances utilisant cette base.");
+    };
+  });
+
+  const closeAllDb = async () => {
+    if ('databases' in indexedDB) {
+      try {
+        const dbs = await indexedDB.databases();
+        for (const dbInfo of dbs) {
+          disp(`Nom: ${dbInfo.name}, Version: ${dbInfo.version}`);
+          try {
+            const tempReq = indexedDB.open(dbInfo.name, dbInfo.version);
+            tempReq.onsuccess = e => {
+              const tempDb = e.target.result;
+              tempDb.close();
+              disp("Base " + dbInfo.name + " fermée.");
+            };
+          } catch (err) {
+            disp("Impossible d'ouvrir/fermer " + dbInfo.name + " : " + err.message);
+          }
+        }
+      } catch (err) {
+        disp("Erreur lors de la récupération des bases : " + err.message);
+      }
+    } else {
+      disp("indexedDB.databases() non supporté.");
+    }
+  };
+
+  const performUpgrade = (dbName, newVersion, expectedStores, missingStores, indexDifferences) => new Promise((resolve, reject) => {
+    const req = indexedDB.open(dbName, newVersion);
+
+    req.onupgradeneeded = ev => {
+      const upgradeDb = ev.target.result;
+      disp("Upgrade déclenché. Nouvelle version : " + upgradeDb.version);
+
+      missingStores.forEach(storeName => {
+        if (!upgradeDb.objectStoreNames.contains(storeName)) {
+          const store = upgradeDb.createObjectStore(storeName, { autoIncrement: true, keyPath: "idInstance" });
+          disp("Création du store : " + storeName);
+          const idx = expectedStores.indexOf(storeName);
+          (fieldsRef[idx] || []).forEach(field => {
+            if (field.indexer === "oui") {
+              const indexName = storeName + "_" + prefixIndex + field.nom;
+              try {
+                store.createIndex(indexName, field.nom, { unique: field.unique === "oui" });
+                disp("Index créé : " + indexName);
+              } catch (err) {
+                disp("Erreur création index " + indexName + " : " + err.message);
+              }
+            }
+          });
+        }
+      });
+
+      Object.entries(indexDifferences).forEach(([storeName, indexes]) => {
+        try {
+          const objStore = ev.target.transaction.objectStore(storeName);
+          const idx = expectedStores.indexOf(storeName);
+          const fields = fieldsRef[idx] || [];
+          fields.forEach(field => {
+            const indexName = storeName + "_" + prefixIndex + field.nom;
+            if (indexes.includes(indexName) && !objStore.indexNames.contains(indexName)) {
+              try {
+                objStore.createIndex(indexName, field.nom, { unique: field.unique === "oui" });
+                disp("Ajout index manquant : " + indexName);
+              } catch (err) {
+                disp("Erreur ajout index " + indexName + " : " + err.message);
+              }
+            }
+          });
+        } catch (err2) {
+          disp("Erreur ajout indexes dans " + storeName + " : " + err2.message);
+        }
+      });
+    };
+
+    req.onsuccess = e => {
+      const db = e.target.result;
+      db.onversionchange = () => {
+        disp("Version change détectée après upgrade, fermeture.");
+        db.close();
+      };
+      resolve(db);
+    };
+    req.onerror = e => reject(e.target.error);
+    req.onblocked = () => {
+      talk("Maj bloquée par une autre connexion.");
+      alert("Veuillez fermer les autres onglets ou instances utilisant cette base.");
+    };
+  });
+
+  await closeAllDb();
+
+  baseFullName = baseNamePrefix;
+  const dbName = baseFullName;
+  try {
+    closeDb();
+  } catch (err) {
+    disp("Erreur fermeture précédente : " + err.message);
+  }
+
+  disp("Ouverture initiale de la base pour inspection : " + dbName);
+
+  let currentDb;
+  try {
+    currentDb = await openDb(dbName);
+    disp("Ouverture de currentDb ok.");
+  } catch (err) {
+    disp("Erreur ouverture initiale : " + (err && err.message ? err.message : err));
+    return;
+  }
+
+  const currentVersion = Number(currentDb.version) || 1;
+  disp("Base ouverte. Version actuelle : " + currentVersion);
+
+  const existingStores = Array.from(currentDb.objectStoreNames);
+  const expectedStores = tablesRef.map(t => t.nom);
+  const missingStores = expectedStores.filter(s => !existingStores.includes(s));
+  const indexDifferences = {};
+
+  for (let i = 0; i < expectedStores.length; i++) {
+    const storeName = expectedStores[i];
+    if (!existingStores.includes(storeName)) continue;
+
+    const expectedIndexes = (fieldsRef[i] || [])
+      .filter(f => f.indexer === "oui")
+      .map(f => storeName + "_" + prefixIndex + f.nom);
+
+    try {
+      const tx = currentDb.transaction(storeName, "readonly");
+      const storeObj = tx.objectStore(storeName);
+      const existingIndexes = Array.from(storeObj.indexNames);
+      const missingIndexes = expectedIndexes.filter(idx => !existingIndexes.includes(idx));
+      if (missingIndexes.length) {
+        indexDifferences[storeName] = missingIndexes;
+        disp("Indexes manquants dans " + storeName + " : " + missingIndexes.join(", "));
+      }
+    } catch (err) {
+      disp("Erreur inspection store " + storeName + " : " + err.message);
+      if (!missingStores.includes(storeName)) missingStores.push(storeName);
+    }
+  }
+
+  if (!missingStores.length && Object.keys(indexDifferences).length === 0) {
+    disp("Aucune mise à jour nécessaire.");
+    dbInstance = currentDb;
+    return;
+  }
+
+  disp("Mise à jour requise. Fermeture de l'instance.");
+  try {
+    currentDb.close();
+  } catch (err) {
+    disp("Erreur fermeture currentDb avant upgrade : " + err.message);
+  }
+
+  const newVersion = currentVersion + 1;
+  disp("Ouverture en mode upgrade, version : " + newVersion);
+
+  try {
+    const upgradedDb = await performUpgrade(dbName, newVersion, expectedStores, missingStores, indexDifferences);
+    disp("Upgrade terminé. Version actuelle : " + upgradedDb.version);
+    dbInstance = upgradedDb;
+  } catch (err) {
+    disp("Erreur durant l'upgrade : " + err.message);
+  }
+}
+
+
+
+
+
+
+
+*/
+
+
+
+
+async function initDb() {
+  disp("Helpers (toutes définies à l'intérieur pour n'avoir qu'une seule fonction globale)");
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+  const dispSafe = msg => { try { disp(msg); } catch (e) { console.log(msg); } };
+  const talkSafe = msg => { try { talk(msg); } catch (e) { console.log(msg); } };
+
+
+  const openReadonly = (name) => new Promise((resolve, reject) => {
+	disp("Entrée dans openReadOnly   (local)");
+    const req = indexedDB.open(name);
+    let resolved = false;
+    req.onsuccess = e => {
+      resolved = true;
+      const db = e.target.result;
+      db.onversionchange = () => {
+        disp("Version change détectée, fermeture.");
+        try { db.close(); } catch (er) {}
+      };
+	  closeDb();					//tva
+      resolve(db);
+    };
+    req.onerror = e => {
+      if (!resolved) reject(e.target.error);
+    };
+    req.onblocked = () => {
+      disp("// si onblocked est appelé lors d'une simple ouverture en lecture, on signale et rejette");
+      disp("Ouverture en lecture bloquée par une autre connexion.");
+      reject(new Error("blocked"));
+    };
+  });
+
+  const closeAllKnownDbs = async () => {
+	disp("Entrée dans closeAllKnownDbs (local)");
+    if (!('databases' in indexedDB) || typeof indexedDB.databases !== 'function') {
+      disp("indexedDB.databases() non supporté, impossible de forcer la fermeture des autres connexions.");
+      return;
+    }
+    try {
+      const dbs = await indexedDB.databases();
+      for (const info of dbs) {
+        if (!info.name) continue;
+        disp(`Tentative de fermeture : ${info.name} (v${info.version})`);
+        try {
+          disp("// ouvrir et fermer immédiatement pour récupérer une référence locale et la fermer");
+          const temp = await openReadonly(info.name);
+          try { temp.close(); disp("Fermeture locale de " + info.name); } catch (err) { disp("Erreur fermeture locale " + info.name + " : " + err.message); }
+        } catch (err) {
+          disp("Impossible d'ouvrir/fermer " + info.name + " : " + (err && err.message ? err.message : err));
+        }
+      }
+    } catch (err) {
+      disp("Erreur lors de closeAllKnownDbs : " + err.message);
+    }
+  };
+
+  disp("// performUpgrade est maintenant strictement interne");
+  function performUpgrade(dbName, newVersion, expectedStores, missingStores, indexDifferences) {
+    return new Promise((resolve, reject) => {
+      let blocked = false;
+      const req = indexedDB.open(dbName, newVersion);
+
+      req.onupgradeneeded = ev => {
+        const upgradeDb = ev.target.result;
+        disp("Upgrade onupgradeneeded. Nouvelle version : " + upgradeDb.version);
+
+        disp("// création des stores manquants et index associés");
+        for (const storeName of missingStores) {
+          if (!upgradeDb.objectStoreNames.contains(storeName)) {
+            const store = upgradeDb.createObjectStore(storeName, { autoIncrement: true, keyPath: "idInstance" });
+            disp("Création du store : " + storeName);
+            const idx = expectedStores.indexOf(storeName);
+            (fieldsRef[idx] || []).forEach(field => {
+              if (field.indexer === "oui") {
+                const indexName = storeName + "_" + prefixIndex + field.nom;
+                try {
+                  store.createIndex(indexName, field.nom, { unique: field.unique === "oui" });
+                  disp("Index créé : " + indexName);
+                } catch (err) {
+                  disp("Erreur création index " + indexName + " : " + err.message);
+                }
+              }
+            });
+          } else {
+            disp("Store déjà existant : " + storeName);
+          }
+        }
+
+        disp("// ajouter index manquants dans stores existants");
+        for (const [storeName, indexes] of Object.entries(indexDifferences)) {
+          try {
+            const objStore = ev.target.transaction.objectStore(storeName);
+            const idx = expectedStores.indexOf(storeName);
+            const fields = fieldsRef[idx] || [];
+            fields.forEach(field => {
+              const indexName = storeName + "_" + prefixIndex + field.nom;
+              if (indexes.includes(indexName) && !objStore.indexNames.contains(indexName)) {
+                try {
+                  objStore.createIndex(indexName, field.nom, { unique: field.unique === "oui" });
+                  disp("Ajout index manquant : " + indexName);
+                } catch (err) {
+                  disp("Erreur ajout index " + indexName + " : " + err.message);
+                }
+              }
+            });
+          } catch (err2) {
+            disp("Erreur ajout indexes dans " + storeName + " : " + err2.message);
+          }
+        }
+      };
+
+      req.onsuccess = e => {
+        if (blocked) {
+          disp("// si on a été bloqué auparavant, fermer et rejeter");
+          const db = e.target.result;
+          try { db.close(); } catch (er) {}
+          return reject(disp("Mise à jour bloquée"));
+        }
+        const db = e.target.result;
+        db.onversionchange = () => {
+          disp("Version change détectée après upgrade, fermeture.");
+          try { db.close(); } catch (er) {}
+        };
+        resolve(db);
+      };
+
+      req.onerror = e => reject(e.target.error);
+      req.onblocked = () => {
+        blocked = true;
+        disp("Upgrade bloquée par une autre connexion.");
+      };
+    });
+  }
+
+  disp("// --- début du flux principal ---");
+  await closeAllKnownDbs();
+
+  baseFullName = baseNamePrefix;
+  const dbName = baseFullName;
+
+  try { if (typeof closeDb === 'function') closeDb(); } catch (err) { dispSafe("Erreur fermeture précédente : " + err.message); }
+
+  disp("Ouverture initiale de la base pour inspection : " + dbName);
+
+  let currentDb;
+  try {
+    currentDb = await openReadonly(dbName);
+    disp("Ouverture read-only OK.");
+  } catch (err) {
+    disp("// si blocked, on va tenter plusieurs fois après avoir forcé la fermeture locale des DB connues");
+    disp("Ouverture initiale échouée : " + (err && err.message ? err.message : err));
+    // tentative de récupération : essayer encore quelques fois
+    const maxAttempts = 5;
+    let attempt = 1;
+    let success = false;
+    while (attempt <= maxAttempts && !success) {
+      disp(`Nouvelle tentative d'ouverture (${attempt}/${maxAttempts}) après fermeture des connexions connues.`);
+      await closeAllKnownDbs();
+      await sleep(200 * attempt);
+      try {
+        currentDb = await openReadonly(dbName);
+        success = true;
+        disp("Ouverture read-only réussie après tentative " + attempt);
+      } catch (err2) {
+        disp("Tentative " + attempt + " échouée : " + (err2 && err2.message ? err2.message : err2));
+        attempt++;
+      }
+    }
+    if (!success) {
+      disp("Impossible d'ouvrir la base en lecture, opération arrêtée.");
+      return;
+    }
+  }
+
+  const currentVersion = Number(currentDb.version) || 1;
+  disp("Base ouverte. Version actuelle : " + currentVersion);
+
+  const existingStores = Array.from(currentDb.objectStoreNames || []);
+  const expectedStores = Array.isArray(tablesRef) ? tablesRef.map(t => t.nom) : [];
+  const missingStores = expectedStores.filter(s => !existingStores.includes(s));
+  const indexDifferences = {};
+
+  for (let i = 0; i < expectedStores.length; i++) {
+    const storeName = expectedStores[i];
+    if (!existingStores.includes(storeName)) continue;
+
+    const expectedIndexes = (fieldsRef[i] || [])
+      .filter(f => f.indexer === "oui")
+      .map(f => storeName + "_" + prefixIndex + f.nom);
+
+    try {
+      const tx = currentDb.transaction(storeName, "readonly");
+      const storeObj = tx.objectStore(storeName);
+      const existingIndexes = Array.from(storeObj.indexNames || []);
+      const missingIndexes = expectedIndexes.filter(idx => !existingIndexes.includes(idx));
+      if (missingIndexes.length) {
+        indexDifferences[storeName] = missingIndexes;
+        disp("Indexes manquants dans " + storeName + " : " + missingIndexes.join(", "));
+      }
+    } catch (err) {
+      disp("Erreur inspection store " + storeName + " : " + err.message);
+      if (!missingStores.includes(storeName)) missingStores.push(storeName);
+    }
+  }
+
+  disp("// Si rien à faire, garder l'instance ouverte");
+  if (!missingStores.length && Object.keys(indexDifferences).length === 0) {
+    disp("Aucune mise à jour nécessaire.");
+    dbInstance = currentDb;
+    dbInstance.onversionchange = () => {
+      disp("Version change détectée, fermeture.");
+      try { dbInstance.close(); } catch (er) {}
+    };
+    return dbInstance;
+  }
+
+  disp("// Préparer l'upgrade");
+  disp("Mise à jour requise. Fermeture de l'instance locale avant upgrade.");
+  try { currentDb.close(); } catch (err) { disp("Erreur fermeture currentDb : " + err.message); }
+
+  disp("// tenter plusieurs fois l'upgrade si bloqué");
+  const newVersion = currentVersion + 1;
+  const maxUpgradeAttempts = 6;
+  let attempt = 1;
+  while (attempt <= maxUpgradeAttempts) {
+    await closeAllKnownDbs();
+    const backoff = 300 * attempt;
+    disp(`Tentative d'upgrade ${attempt}/${maxUpgradeAttempts} (version ${newVersion}), attente ${backoff}ms avant ouverture.`);
+    await sleep(backoff);
+
+    try {
+      const upgradedDb = await performUpgrade(dbName, newVersion, expectedStores, missingStores, indexDifferences);
+      disp("Upgrade terminé. Version actuelle : " + upgradedDb.version);
+      dbInstance = upgradedDb;
+      dbInstance.onversionchange = () => {
+        disp("Version change détectée après upgrade, fermeture.");
+        try { dbInstance.close(); } catch (er) {}
+      };
+      return dbInstance;
+    } catch (err) {
+      disp("Upgrade échouée (tentative " + attempt + ") : " + (err && err.message ? err.message : err));
+      disp("// si l'erreur provient d'un blocage, on réessaie ; sinon on arrête");
+      if ((err && /blocked/i.test(err.message)) || err.message === "upgrade blocked") {
+        attempt++;
+        continue;
+      } else {
+        disp("Erreur critique durant l'upgrade : " + (err && err.message ? err.message : err));
+        throw err;
+      }
+    }
+  }
+
+  disp("// si on arrive ici, toutes les tentatives ont échoué");
+  disp("Toutes les tentatives d'upgrade ont échoué à cause de connexions bloquantes.");
+  throw new Error("Nombre de blocage dépassée, mise à jour impossible.");
+}
+
+
+
+
+
+
+function performUpgrade(dbName, newVersion, expectedStores, missingStores, indexDifferences) {
+  return new Promise((resolve, reject) => {
+    // tenter de fermer toutes les connexions connues avant l'upgrade
+    closeAllDb().catch(() => {});
+
+    const req = indexedDB.open(dbName, newVersion);
+
+    req.onupgradeneeded = ev => {
+      const upgradeDb = ev.target.result;
+      disp("Upgrade déclenché. Nouvelle version : " + upgradeDb.version);
+
+      // créer les stores manquants et leurs index attendus
+      for (const storeName of missingStores) {
+        if (!upgradeDb.objectStoreNames.contains(storeName)) {
+          const store = upgradeDb.createObjectStore(storeName, { autoIncrement: true, keyPath: "idInstance" });
+          disp("Création du store : " + storeName);
+          const idx = expectedStores.indexOf(storeName);
+          (fieldsRef[idx] || []).forEach(field => {
+            if (field.indexer === "oui") {
+              const indexName = storeName + "_" + prefixIndex + field.nom;
+              try {
+                store.createIndex(indexName, field.nom, { unique: field.unique === "oui" });
+                disp("Index créé : " + indexName);
+              } catch (err) {
+                disp("Erreur création index " + indexName + " : " + err.message);
+              }
+            }
+          });
+        } else {
+          disp("Store déjà existant : " + storeName);
+        }
+      }
+
+      // ajouter les index manquants dans les stores existants
+      Object.entries(indexDifferences).forEach(([storeName, indexes]) => {
+        try {
+          const objStore = ev.target.transaction.objectStore(storeName);
+          const idx = expectedStores.indexOf(storeName);
+          const fields = fieldsRef[idx] || [];
+          fields.forEach(field => {
+            const indexName = storeName + "_" + prefixIndex + field.nom;
+            if (indexes.includes(indexName) && !objStore.indexNames.contains(indexName)) {
+              try {
+                objStore.createIndex(indexName, field.nom, { unique: field.unique === "oui" });
+                disp("Ajout index manquant : " + indexName);
+              } catch (err) {
+                disp("Erreur ajout index " + indexName + " : " + err.message);
+              }
+            }
+          });
+        } catch (err2) {
+          disp("Erreur ajout indexes dans " + storeName + " : " + err2.message);
+        }
+      });
+    };
+
+    req.onsuccess = e => {
+      const db = e.target.result;
+      db.onversionchange = () => {
+        disp("Version change détectée après upgrade, fermeture.");
+        try { db.close(); } catch (e) {}
+      };
+      resolve(db);
+    };
+
+    req.onerror = e => reject(e.target.error);
+
+    req.onblocked = () => {
+      disp("Maj bloquée par une autre connexion.");
+      try { talk("Maj bloquée par une autre connexion."); } catch (e) {}
+    };
+  });
+}
+
+
+
+
+
+
+
+
+
+/*function closeAllDb(){
+	    // 1) lister et fermer toutes les bases (si supporté)
+    if ('databases' in indexedDB) {
+      const dbs = indexedDB.databases();
+      for (let i = 0; i < dbs.length; i++) {
+        const dbInfo = dbs[i];
+        disp(`Nom: ${dbInfo.name}, Version: ${dbInfo.version}`);
+        try {
+          const tempDb = openDb(dbInfo.name, dbInfo.version);
+          tempDb.close();
+          disp("Base " + dbInfo.name + " fermée.");
+        } catch (err) {
+          disp("Impossible d'ouvrir/fermer " + dbInfo.name + " : " + err.message);
+        }
+      }
+    } else {
+      disp("indexedDB.databases() non supporté.");
+	}
+}*/
+
+
+/*
+==================================================================
+AJOUT D'UNE FICHE
+=====================================================================
+*/
+
+function btnAdd() {
+
+    const tableMeta = tablesRef[currentTable];
+    const tableName = tableMeta.nom;
+    const tableLabel = tableMeta.etiquette;
+    const fields = fieldsRef[currentTable];
+    const descLen = fields.length;
+
+    let docJson = {};
+    let countVoid = 0;
+
+//    const version = Number(localStorage.getItem("dbVersion")) || 1;
+
+    baseFullName=baseNamePrefix;
+    closeDb();
+
+    const request = indexedDB.open(baseFullName);
+
+    request.onerror = (e) => {
+        disp("❌ Impossible d'ouvrir la BDD. " + e.message);
+    };
+
+    request.onsuccess = (e) => {
+        const db = e.target.result;
+
+        if (!db.objectStoreNames.contains(tableName)) {
+            disp("❌ Store introuvable : '" + tableName + "'");
+            return;
+        }
+
+        const transaction = db.transaction(tableName, "readwrite");
+        const objectStore = transaction.objectStore(tableName);
+
+        fields.forEach((field, index) => {
+            const nameField = field.nom;
+            const typeField = field.type;
+            const storeField = prefixStore + nameField;
+            const formField = prefixForm + nameField;
+
+            let formValue = "";
+            try {
+                formValue = document.getElementById(formField).value || "";
+            } catch (e) {
+                formValue = "";
+            }
+
+            formValue = formValue.replaceAll(q, "");
+
+            switch (typeField) {
+                case "lat":
+                    formLat = formValue;
+                    break;
+                case "lon":
+                    formLon = formValue;
+                    break;
+                case "number":
+                    formValue = Number(formValue);
+                    break;
+                case "date":
+                    formValue = new Date(formValue);
+                    break;
+                // autres types peuvent être validés ici si besoin
+            }
+
+            if (!formValue) countVoid++;
+
+            docJson[storeField] = formValue;
+        });
+
+        if (countVoid === descLen) {
+            disp("⚠️ Tous les champs sont vides, fiche ignorée.");
+            attendre(false, "");
+            return;
+        }
+
+        disp("docJson=" + JSON.stringify(docJson));
+
+        const requestAdd = objectStore.add(docJson);
+
+        requestAdd.onsuccess = (event) => {
+            const idInstance = event.target.result;
+            document.getElementById("idInstance").value = idInstance;
+            disp(`✅ Création de la fiche numéro ${idInstance} de la table '${tableLabel}'.`);
+            chooseTable();
+            btnResetForm();
+        };
+
+        requestAdd.onerror = (event) => {
+            disp("❌ Erreur : fiche en doublon ou invalide. " + event.message);
+        };
+    };
+}
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+==============================================
+C(R)UD I/O RECHERCHE D'UNE OU PLUSIEURS FICHES
+==============================================
+*/
+function btnSearch(searchField){
+
+	attendre(true, "Recherche");
+	
+	const debut = performance.now(); // ou Date.now()
+
+	var findList=[];
+	var count=0;
+
+	var searchValue=document.getElementById(prefixForm+searchField).value;
+
+	try{
+		var tableName=tablesRef[currentTable].nom;
+	}catch(e){
+		//disp("Référentiel non chargé.");
+		return;
+	}
+	var tableLabel=tablesRef[currentTable].etiquette;
+
+	
+
+	if(searchValue==null){
+		searchValue="";
+	}
+	
+	var indexName=tableName+"_"+prefixIndex+searchField;
+
+
+
+	closeDb();
+	baseFullName = baseNamePrefix;
+	//var request = indexedDB.open(baseFullName);
+
+    	//const version = Number(localStorage.getItem("dbVersion")) || 1;
+    	const request = indexedDB.open(baseFullName);
+
+	request.onerror = (e) => disp("❌ Impossible d'ouvrir la BDD. "+e.message);
+	request.onsuccess = (e) => {
+		var db = e.target.result;
+
+		try{
+			var transaction=db.transaction(tableName, "readonly");
+		}catch(e){
+			return;
+		}
+		var objectStore=transaction.objectStore(tableName);
+		try{
+			var oIndex=objectStore.index(indexName);
+		}catch(e){
+			disp("Index '"+indexName+"' inconnue.");
+			return;
+		}
+		var range=IDBKeyRange.lowerBound(searchValue);	// Superieur ou égal
+		var cursorRequest=oIndex.openCursor(range);
+
+		if(!cursorRequest){
+			return;
+		}
+
+		var countRequest=oIndex.count();
+		countRequest.onerror=function(){
+			return;
+		};
+
+		cursorRequest.onsuccess=function(event) {
+
+			var cursor=event.target.result;
+
+			if(cursor && count<MAX_SEARCH){
+				var value=cursor.value;
+				
+				var searchFieldStore=value[searchField];
+				
+				var searchFieldStoreLen=searchValue.length;
+				const comparePart = searchFieldStore.slice(0, searchFieldStoreLen);
+				
+				if((comparePart==searchValue)||searchValue==""){
+					var cursorKey=cursor.value.idInstance;
+					findList.push(Number(cursorKey));
+					count++;
+					cursor.continue();
+				}
+			}
+		};
+	
+		transaction.oncomplete=function(e) {
+			//disp("Nombre de fiche trouvé : "+findList.length);
+			
+			chooseTable();
+			attendre(false, "");
+			displaySearch(findList);
+			//attendre(false, "");
+		};
+	
+		cursorRequest.onerror=function(e){
+			//disp("cursorRequest.onerror="+e.message);
+			return;
+		};
+	};
+}
+
+
+
+
+
+
+//==============================================================
+//C(R)UD-IO AFFICHAGE D'UNE OU PLUSIEURS FICHES DANS UN TABLEAU
+//==============================================================
+
+
+function displaySearch(findList){
+
+
+	btnResetForm();
+	btnResetResearch();
+
+	var resHtml="";
+	dispDiv("printOutPut", resHtml);
+	var findListLen=findList.length;
+
+	var tableName=tablesRef[currentTable].nom;
+
+	baseFullName = baseNamePrefix;
+
+ 	//const dbVersion = Number(localStorage.getItem("dbVersion")) || 1;
+    	const requestBase = indexedDB.open(baseFullName);
+
+	requestBase.onerror = (e) => disp("❌ Impossible d'ouvrir la BDD. "+e.message);
+	requestBase.onsuccess = (e) => {
+		db = e.target.result;
+
+		var transaction=db.transaction(tableName, "readonly");
+		transaction.oncomplete=function(e) {
+
+			resHtml+="</table>";
+			dispDiv("printOutPut",resHtml);
+		};
+
+		var objectStore=transaction.objectStore(tableName);
+
+		for(var i in findList){
+
+			if(i==0){
+
+				resHtml+="<hr></hr><p><h2>Liste des résultats de la recherche</h2></p>";
+				resHtml+="<table border=1>";
+				resHtml+="<tr>";
+				resHtml+="<td><b>Sélection</b></td>";
+
+				for(itemField of fieldsRef[currentTable]){
+					var nameField=itemField.nom;
+					//var indexField=tableName+"_"+itemField.indexer;
+					var indexField=tableName+"_"+itemField.indexer;
+
+					var uniqueField=itemField.unique;
+					var labelName=itemField.etiquette;
+
+					var sigle="";
+					if(indexField=="oui"){
+						sigle+="(i)";
+					}
+					if(uniqueField=="oui"){
+						sigle+="(u)";
+					}
+					resHtml+="<td><b>"+labelName+sigle+"</b></td>";
+				}
+				resHtml+="</tr>";
+			}
+
+			var request=objectStore.get(Number(findList[i]));
+			request.onsuccess=function(event){
+				var data=event.target.result;
+
+				resHtml+="<tr>";
+				countLine=0;
+
+				for(itemField of fieldsRef[currentTable]){
+					if(countLine==0){
+						const dataInstance=data.idInstance;
+						resHtml+="<td><button onclick='btnSelect("+q+dataInstance+q+");'>"+data.idInstance+"</button></td>";
+					}
+					var nameField=itemField.nom;
+					var storeField=prefixStore+nameField;
+					var typeField=itemField.type;
+					var storeValue=data[storeField];
+
+					if(!storeValue){
+						storeValue="";
+					}
+
+					if(typeField=="hyperText"){
+						resHtml+="<td><p><a href='"+storeValue+"'>"+storeValue+"</a></p></td>";
+					}else if(typeField=="lat"){
+						resHtml+="<td><p>"+storeValue+"</p></td>";
+					}else if(typeField=="lon"){
+						resHtml+="<td><p>"+storeValue+"</p></td>";
+					}else{
+						resHtml+="<td><p>"+storeValue+"</p></td>";
+					}
+
+					countLine++;
+				}
+
+				resHtml+="</tr>";
+				//attendre(false, "");
+			};
+		}
+	};
+}
+
+
+
+
+
+
+/*======================
+CR(U)DIO MODIFICATION D'UNE FICHE
+========================
+*/
+function btnUpdate(){
+
+	var idInstance=document.getElementById("idInstance").value;
+
+	if(!idInstance){
+		//disp("Le numéro de fiche doit être renseigné, afin de la modifier.");
+		return;
+	}
+
+	var tableLabel=tablesRef[currentTable].etiquette;
+
+	var strJson="";
+	var docJson=[];
+	var countForm=0;
+	var countField=0;
+	var descLen=fieldsRef[currentTable].length;
+
+	for(var i in fieldsRef[currentTable]){
+
+		var nameField=fieldsRef[currentTable][i].nom;
+		var typeField=fieldsRef[currentTable][i].type;
+		var formField=prefixForm+nameField;
+		var storeField=prefixStore+nameField;
+
+		var formValue=document.getElementById(formField).value;
+
+		if(!formValue){
+			formValue="";
+		}
+
+		while(formValue.includes(q)){
+			formValue=formValue.replace(q, "");
+		}
+
+		formValue.trim();
+
+		countForm++;
+
+		if(countForm==1){
+			strJson+="{";
+		}
+		strJson+="\""+storeField+"\":\""+formValue+"\"";
+
+		if(i<descLen-1){
+			strJson+=", ";
+		}
+	}
+	if(!countForm){
+		return;
+	}
+	strJson+="}";
+
+
+	docJson=JSON.parse(strJson);
+
+	closeDb();
+	var request = indexedDB.open(baseFullName);
+	request.onerror = () => disp("❌ Impossible d'ouvrir la base de données.");
+	request.onsuccess = (e) => {
+		var db = e.target.result;
+		var tableName=tablesRef[currentTable].nom;
+		var transaction=db.transaction(tableName, "readwrite");
+		var objectStore=transaction.objectStore(tableName);
+
+		var requestGet = objectStore.get(Number(idInstance));
+
+		requestGet.onerror = function (evt){
+			return;
+		};
+
+		requestGet.onsuccess = function (event){
+
+			var data = requestGet.result;
+
+			if(!data){
+				return;
+			}
+
+			for(var fieldItem in fieldsRef[currentTable]){
+				var nameField=fieldsRef[currentTable][fieldItem].nom;
+				var storeField=prefixStore+nameField;
+				data[storeField]=docJson[storeField];
+			}
+
+			var requestPut=objectStore.put(data);
+
+			requestPut.onerror=function(event) {
+				disp("Erreur lors de la modification d'une fiche, cette fiche est en doublon avec une autre. Vérifiez si un champ est défini comme 'unique'.");
+				return;
+			};
+
+			requestPut.onsuccess=function(event) {
+				disp("Modification réussie de la fiche '"+idInstance+"' de la table '"+tableLabel+"'.");
+				btnResetForm();
+				return;
+			};
+		};
+	};
+}
+
+
+
+
+
+
+/*
+=====================================================================
+CRU(D)IO SUPPRESSION D'UNE FICHE
+=====================================================================
+*/
+function btnDelete(){
+
+	var idInstance=document.getElementById("idInstance").value;
+	if(Number(idInstance)<1){
+		//disp("Veuillez renseigner un numéro de fiche, afin de la supprimer.");
+		return;
+	}
+
+	var tableName=tablesRef[currentTable].nom;
+
+	closeDb();
+	var request = indexedDB.open(baseFullName);
+	request.onerror = () => disp("❌ Impossible d'ouvrir la base de données.");
+	request.onsuccess = (e) => {
+		var db = e.target.result;
+
+		var transaction=db.transaction(tableName, "readwrite");
+		var objectStore=transaction.objectStore(tableName);
+
+		var requestDel = objectStore.delete(Number(idInstance));
+
+		requestDel.onsuccess = function(event) {
+
+			var tableLabel=tablesRef[currentTable].etiquette;
+			disp("Suppression réussie de la fiche '"+idInstance+"' de la table '"+tableLabel+"'.");
+			//exportToVarJson();
+
+			btnResetForm();
+			chooseTable();
+			return;
+		};
+		requestDel.onerror = function(event) {
+			//disp("Erreur lors de la suppression d'une fiche, cette fiche est en doublon avec une autre. Vérifiez si un champ est défini");
+			return;
+		};
+	};
+}
+
+
+
+
+
+
+/*
+==============================================================================
+STATISTIQUE SUR UNE TABLE, UN CHAMP DE CRITERE INDEXXE ET UN CHAMP A TOTALISER
+==============================================================================
+*/
+function btnStats(){
+
+	var resHtml="<p>Statistique sur un model ou definition à partir d'un index. Et d'un champ à totaliser.</p>";
+	
+	resHtml+="<table border=1>";
+	
+	resHtml+="<tr>";
+	resHtml+="<td>Nom de la table</td>";
+	resHtml+="<td>Nom du champ indexé (critère)</td>";
+	resHtml+="<td>Valeur du critère (peut-être partiel et même vide)</td>";
+	resHtml+="<td>Unités</td>";
+	resHtml+="<td>Champ à totaliser</td>";
+	resHtml+="</tr>";
+	
+	resHtml+="<tr>";
+	resHtml+="<td><input type='text' id='nomTable'></input></td>";
+	resHtml+="<td><input type='text' id='indexField'></input></td>";
+	resHtml+="<td><input type='text' id='critValue'></input></td>";
+	resHtml+="<td><input type='text' id='unitValue'></input></td>";
+	resHtml+="<td><input type='text' id='fieldToSum'></input></td>";
+	resHtml+="</table>";
+	
+	resHtml+="<br></br><button id='startStats' onclick='startStats();'>Lancer les statistiques.</button>";
+
+	dispDiv("statsResult", resHtml);	
+}
+
+function startStats(){
+
+	var tableName=document.getElementById("nomTable").value;
+	var searchField=document.getElementById("indexField").value;
+	var searchValue=document.getElementById("critValue").value;
+	var unitValue=document.getElementById("unitValue").value;
+	var cumulField=document.getElementById("fieldToSum").value;
+
+	var count=0;						// bon calculs 
+	//var tableName="evenement";			// Table cible, doit être alimentée.
+	//var searchField="dateAtelier";			// champ de ref, doit être indexé.
+	//var searchValue="2025";				// Valeur de recherche
+	//var cumulField="poidsKg";			// Champ cible qui est cumulé.
+	var cumulFieldCountKo=0;			// Nombre de champ cible à zéros ou invalide.
+	var cumulFieldValue=0;
+	var champSum=0;
+	
+	var transaction=db.transaction(tableName, "readonly");
+	var objectStore=transaction.objectStore(tableName);
+
+	var indexName=tableName+"_"+prefixIndex+searchField;
+	//disp("indexName="+indexName);
+
+	if(searchValue==null){
+		searchValue="";
+	}
+
+	try{
+		var oIndex=objectStore.index(indexName);
+	}catch(e){
+		//disp("Le présent index n'existe pas.");
+		return;
+	}
+	
+	var range=IDBKeyRange.lowerBound(searchValue);	// Superieur ou égal
+	//disp("range ok");
+
+	var cursorRequest=oIndex.openCursor(range);
+	//	disp("oIndex openCursor ok");
+	if(!cursorRequest){
+		return;
+	}
+
+	cursorRequest.onsuccess=function(event) {
+
+	//disp("cursorRequest ok");
+	var cursor=event.target.result;
+	//disp("cursor="+JSON.stringify(cursor));
+	if(cursor && count<=MAXID){
+		//disp("cursor="+JSON.stringify(cursor));
+		var value=cursor.value;
+		//disp("value="+JSON.stringify(value));
+		var searchFieldStore=value[searchField];
+				
+		//disp("searchFieldStore="+searchFieldStore);
+				
+		searchFieldStoreLen=searchValue.length;
+		const comparePart = searchFieldStore.slice(0, searchFieldStoreLen);
+				
+		if((comparePart==searchValue)||searchValue==""){
+			var cursorKey=cursor.value.idInstance;
+			var cumulFieldValue = cursor.value[cumulField];
+
+			if(!cumulFieldValue){
+				cumulFieldValue="0.0";
+				cumulFieldCountKo++;
+			}
+			cumulFieldValueRep = cumulFieldValue.replace(",", ".");
+			try{
+				var champField=eval(cumulFieldValueRep);
+			}catch(e){
+				var champField=0.0;
+			}
+			if(champField){
+				count++;
+				champSum+=champField;	
+			}else{
+				cumulFieldCountKo++;
+			}
+			var arrondi = Math.round(champSum * 100) / 100;
+			//dispDiv("statsResult","<p>Nombre de fiche trouvé : "+count+", total en Kilogrames : "+arrondi+"</p>");
+			//disp("count="+count+", poidsRep="+poidsRep+", totalKg="+totalKg);
+		}}
+		cursor.continue();
+	}
+	cursorRequest.onerror=function(e){
+		return;
+	};
+	transaction.oncomplete=function(e) {
+		var arrondi = Math.round(champSum * 100) / 100;
+		//disp("Nombre de fiches trouvées : "+count+", total en "+unitValue+" : "+arrondi);
+		//talk("Total : "+arrondi+" "+unitValue);
+	};
+}
+
+
+
+
+
+
+
+
+
+
+
+
+/*function openDb(name) {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(name);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject("Erreur ouverture DB");
+    });
+}*/
+
+function exportStoreData(store) {
+    return new Promise((resolve) => {
+        const data = [];
+        const cursor = store.openCursor();
+        cursor.onsuccess = () => {
+            if (cursor.result) {
+                data.push(cursor.result.value);
+                cursor.result.continue();
+            } else {
+                resolve(data);
+            }
+        };
+    });
+}
+
+function storeAdd(store, item) {
+    return new Promise((resolve, reject) => {
+        const req = store.add(item);
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject("Erreur ajout item");
+    });
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function countData() {
+  return new Promise((resolve, reject) => {
+		//attendre(true,"Calcul du nombre de fiche");
+
+		countLines=0;
+		baseFullName = baseNamePrefix;
+		//closeDbName(baseFullName);
+		var requestBase = indexedDB.open(baseFullName);
+		requestBase.onerror = (e) => disp("❌ Impossible d'ouvrir la BDD. "+e.message);
+		requestBase.onsuccess = (e) => {
+			var dbCurrent = e.target.result;
+		  	
+			try{
+				const tableName = tablesRef[currentTable].nom;
+				const tableLabel = tablesRef[currentTable].etiquette;
+				var transaction = dbCurrent.transaction(tableName, "readonly");
+				const objectStore = transaction.objectStore(tableName);
+
+				const countRequest = objectStore.count();
+
+				countRequest.onsuccess = function(event) {
+					const total = event.target.result;	
+					disp("✅ Nombre total de fiche dans la table '" + tableLabel + "' : " + total);
+					//attendre(false, "");
+					resolve();
+				};
+				countRequest.onerror = function() {
+					reject();
+				};
+			}catch(e){
+				resolve();
+			}
+		};
+	});
+}
+
+
+
+
+
+
+
+
+
+
+/*
+=====================================================================
+POINT D'ENTREE DE RECHERCHE DE FICHE
+=====================================================================
+*/
+function btnResearch(){
+	var idInstance=document.getElementById("idInstance").value;
+	
+	if(Number(idInstance)<1){
+		//disp("Veuillez renseigner un numéro de fiche, afin de l'afficher.");
+		return;	
+	}
+	
+	setIdLabel(idInstance);
+	
+	if(Number(idInstance)){
+		btnSelect(idInstance);
+	}
+
+}
+
+
+
+
+/*
+=====================================================================
+EXPORT complet de la table courante.
+=====================================================================
+*/
+function btnAddExport(){
+
+	disp("⚠️ Export en cours.");
+	attendre(true, "Exportation");
+
+	var tableName=tablesRef[currentTable].nom;
+	
+
+	var requestBase = indexedDB.open(baseFullName);
+	requestBase.onerror = () => disp("❌ Impossible d'ouvrir la base de données.");
+	requestBase.onsuccess = (e) => {
+		var db = e.target.result;
+
+		var transaction=db.transaction(tableName, "readonly");
+		var objectStore=transaction.objectStore(tableName);
+		const requestAll = objectStore.getAll();
+		
+		var csv="";
+		var titleLine="";
+
+		requestAll.onerror = function(event){
+			return;
+		}
+
+		requestAll.onsuccess = function(event) {
+	
+			var column=0;
+			for(itemField of fieldsRef[currentTable]){
+
+				if(column){
+					titleLine+=sepExport;
+				}
+				titleLine+=itemField.nom;
+				column++;
+			}
+	
+			const cursor = event.target.result;
+			if (cursor) {
+		
+				var csv = cursor.map(row => {
+						var values = Object.values(row);
+						values.pop();
+						return values.join(sepExport);
+				}).join("\n");
+
+				csv=titleLine+"\n"+csv;
+
+				const blob = new Blob([csv], { type: 'text/csv' });
+				const url = URL.createObjectURL(blob);
+				const a = document.createElement('a');
+				a.href = url;
+				a.download = `${tableName}.csv`;
+				document.body.appendChild(a);
+				a.click();
+				document.body.removeChild(a);
+				attendre(false, "");
+				disp("✅ Export terminé. Le fichier a été téléchargé.");
+			}
+		};
+	};
+}
+
+
+
+
+/*
+===================================================
+Isole le nom du fichier d'un nom de fichier complet
+===================================================
+*/
+function isolateFileName(fullPath){
+	var filename = fullPath.replace(/^.*[\\\/]/, '');
+	return fileName;
+}
+
+
+
+/*
+==============================
+EFFACE LE TABLEAU DE RECHERCHE
+==============================
+*/
+function btnResetResearch(){
+	dispDiv("printOutPut", "");
+}
+
+
+
+
+
+
+
+
+function btnSelect(idInstance) {
+    // Nettoyage éventuel de l'affichage
+    // dispDiv("printOutPut", "");
+
+    setIdLabel(idInstance);
+
+    const tableName = tablesRef[currentTable].nom;
+    const tableLabel = tablesRef[currentTable].etiquette;
+    const baseFullName = baseNamePrefix;
+
+    const requestBase = indexedDB.open(baseFullName);
+
+    requestBase.onerror = (e) => {
+        disp("❌ Impossible d'ouvrir la BDD. " + e.message);
+    };
+
+    requestBase.onsuccess = (e) => {
+        const db = e.target.result;
+        const transaction = db.transaction(tableName, "readonly");
+        const objectStore = transaction.objectStore(tableName);
+        const getRequest = objectStore.get(Number(idInstance));
+
+        getRequest.onsuccess = (event) => {
+            const data = event.target.result;
+
+            if (!data) {
+                btnResetForm();
+                return;
+            }
+
+            const idField = document.getElementById("idInstance");
+            if (idField) {
+                idField.value = idInstance;
+            }
+
+         for (const itemField of fieldsRef[currentTable]) {
+                const nameField = itemField.nom;
+                const formField = prefixForm + nameField;
+                const storeField = prefixStore + nameField;
+                const typeField = itemField.type;
+                const storeValue = data[storeField] || "";
+
+                const inputElement = document.getElementById(formField);
+                if (!inputElement) continue;
+
+                switch (typeField) {
+                    case "texte":
+                    case "hyperText":
+                        inputElement.value = storeValue;
+                        break;
+                    case "lat":
+                        inputElement.value = storeValue;
+                        formLat = storeValue;
+                        break;
+                    case "lon":
+                        inputElement.value = storeValue;
+                        formLon = storeValue;
+                        break;
+                    default:
+                        inputElement.value = `type inconnu : '${typeField}', valeur : '${storeValue}'.`;
+                        break;
+                }
+            }
+        };
+    };
+}
+
+
+
+
+
+
+
+
+
+
+/*
+=====================================================================
+AFFICHAGE D'UN MESSAGE DANS LE TABLEAU DES MESSAGES
+=====================================================================
+*/
+function disp(m){
+
+	lastDisp=m;
+	
+	dispDiv("lastMsg", "<h2>"+m+"</h2>");
+	var msgListLen=msgList.length;
+	
+	if(msgListLen-1==maxMsg){
+		var retShift=msgList.shift();
+	}
+	countMsg++;
+	msgList.push({countMsg:countMsg,msg:m,date:new Date()});
+	var i;
+	msgListLen=msgList.length;
+	var reverseList=msgList;
+	
+	var htmlString="";
+	for(i=0;i<msgListLen;i++){
+		var listItem=reverseList[i].msg;
+		var dateDay=reverseList[i].date;
+		var countMsgJson=reverseList[i].countMsg;
+		if(i==0){
+			htmlString+="<hr></hr><p><h2>Liste des messages</h2></p>";
+
+			htmlString+="<hr></hr>";
+			htmlString+="<table border=1>";
+			
+			htmlString+="<tr>";
+			htmlString+="<td><b>Numéro</b></td>";
+			htmlString+="<td><b>Heure</b></td>";
+			htmlString+="<td><b>Message</b></td>";
+			htmlString+="</tr>";
+		}
+		htmlString+="<tr>";
+		
+		htmlString+="<td>"+countMsgJson+"</td>";
+		htmlString+="<td>"+dateDay.getHours()+":"+dateDay.getMinutes()+":"+dateDay.getSeconds()+"."+dateDay.getMilliseconds()+"</td>";
+		htmlString+="<td><p>"+listItem+"</p></td>";		
+		htmlString+="</tr>";
+	}
+	if(msgListLen){
+		htmlString+="</table>";
+	}
+	dispDiv("messageDiv",htmlString);
+
+}
+
+
+
+
+
+/*
+==============================
+EFFACE LE FORMULAIRE DE SAISIE
+==============================
+*/
+function btnResetForm(){
+
+	document.getElementById("idInstance").value="";
+	
+	btnClearIdLabel();
+	
+	for(fieldNo in fieldsRef[currentTable]){
+		var nameField=fieldsRef[currentTable][fieldNo].nom;
+		var typeField=fieldsRef[currentTable][fieldNo].type;
+		var formField=prefixForm+nameField;
+		try{
+			document.getElementById(formField).value="";
+		}catch(e){
+			return;
+		}
+	}
+	formLat=0.0;
+	formLon=0.0;
+}
+
+
+/*
+=====================================================================
+AFFICHAGE DU FORMULAIRE
+=====================================================================
+*/
+
+function formWrite(){
+
+	var resHtml="";
+	//dispDiv("myForm",resHtml);
+
+	try{
+		tableLabel=tablesRef[currentTable].etiquette;
+	}catch(e){
+		//disp("Table inconnue.");
+		return;
+	}
+	resHtml+="<h2><p>Formulaire de recherche et saisie une fiche de la table : '"+tableLabel+"'.</p></h2>";
+	
+	resHtml+="<table border=1>";
+
+	resHtml+="<thead>";
+	resHtml+="<tr>";
+	resHtml+="<th><label><b>Champ</b></label></th>";
+	resHtml+="<th><b>Valeur</b></th>";
+	resHtml+="</tr>";
+	resHtml+="</thead>";
+	
+	resHtml+="<tr>";
+	resHtml+="<td>Identifiant</td>";	
+	resHtml+="<td><div id='idLabel'></div></td>";
+
+	resHtml+="</tr>";
+	
+
+	for(var itemField in fieldsRef[currentTable]){
+		//var idInstance=fieldsRef[currentTable][itemField].idInstance;
+		var nameField=fieldsRef[currentTable][itemField].nom;
+		var formField=prefixForm+nameField;
+		var fieldLabel=fieldsRef[currentTable][itemField].etiquette;
+		var fieldType=fieldsRef[currentTable][itemField].type;
+		var fieldIndexed=fieldsRef[currentTable][itemField].indexer;
+		var fieldUnique=fieldsRef[currentTable][itemField].unique;
+
+
+		resHtml+="<tbody>";
+		resHtml+="<tr>";
+			
+		var sigle="";
+		if(fieldIndexed=="oui"){
+			sigle+="(i)";
+		}
+		if(fieldUnique=="oui"){
+			sigle+="(u)";
+		}
+		if(fieldType){
+			sigle+="("+fieldType+")";
+		}
+		var choix="";
+		if(!currentSelect&&currentTable==1&&fieldType=="list"&&nameField=="type"){
+			choix=enumListType(nameField, formField, fieldType);
+		}
+		if(!currentSelect&&currentTable==1&&fieldType=="list"&&nameField=="indexer"){
+			choix=enumListIndexed(nameField, formField, fieldIndexed);
+		}
+		if(!currentSelect&&currentTable==1&&fieldType=="list"&&nameField=="unique"){
+			choix=enumListUnique(nameField, formField, fieldUnique);
+		}
+		if(!choix){
+			choix="";
+		}
+		
+		if(fieldIndexed=="non"){
+			resHtml+="<td>"+fieldLabel+sigle+"</td>";
+			if(choix.length>0){
+				resHtml+="<td>"+choix+"</td>";
+			}
+			resHtml+="<td><input type='text' id="+formField+"></input></td>";
+		}else if(fieldIndexed=="oui"){	
+			resHtml+="<td><label>"+fieldLabel+sigle+"</label></td>";
+			if(choix.length>0){
+				resHtml+="<td>"+choix+"</td>";
+			}
+			resHtml+="<td><input type='text' id="+formField+"></input></td>";
+			resHtml+="<td><button onclick='btnSearch("+q+nameField+q+");'>Chercher</button></p></td>";
+		}	
+	}
+	resHtml+="</tr>";
+
+	resHtml+="<tr><tr><p><h2>Recherche avec le numéro de fiche : </h2><input type='Number' min=1 max="+MAXID+" id='idInstance' onchange='btnResearch();'></input></p></td></tr>";
+	
+	resHtml+="</tbody>";
+	resHtml+="</table>";
+	dispDiv("myForm",resHtml);
+}
+
+var currentLat;
+var currentLon;
+
+
+
+
+
+
+function btnGetGeo(){
+	if (!navigator.geolocation) {
+		//disp("Votre navigateur ne supporte pas la géolocalisation, ou vous ne l'avez pas autorisé");
+		return;	
+	}
+	navigator.geolocation.getCurrentPosition(onSuccessGeo, onErrorGeo);
+}
+    
+function onSuccessGeo(position) {
+
+	const {
+  		latitude,
+   		longitude
+	} = position.coords;
+	var lat=latitude;
+	var lon=longitude;
+	
+	
+	if(!formLat||!formLon){
+		disp("Direction à prendre, inconnue ! Sélectionner une fiche contenant, latitude et longitude.");
+		disp("Latitude : "+lat);
+		disp("Longitude : "+lon);
+		return;
+	}
+
+	computeGeo(lat, lon);
+	
+	return;
+}
+
+function computeGeo(lat, lon){
+
+	if(lat&&lon&&formLat&&formLon){
+		if(lat&&lon){
+			btnMagicSquare("Communes limitrophes au dispositif GPS", lat, lon, 0.1);
+			btnMagicSquare("Communes limitrophes du formulaire", formLat, formLon, 0.1);
+		}
+		//var [km, compass]=kmFrom2LatLonPoints(lat, lon);
+		//disp("Vous êtes à "+Math.floor(km,0)+" kilomètres de votre destination.");
+	}
+}
+
+function onErrorGeo(e) {
+	disp("Géolocalisation en erreur : "+e);
+	return;
+}
+
+
+
+
+function kmFrom2LatLonPoints(lat, lon){
+	var R=6371; // Radius of the earth in km
+	var dLat=deg2rad(formLat-lat);  // deg2rad below
+	var dLon=deg2rad(formLon-lon); 
+	var a=Math.sin(dLat/2)*Math.sin(dLat/2)+
+		Math.cos(deg2rad(lat))*Math.cos(deg2rad(formLat))* 
+		Math.sin(dLon/2)*Math.sin(dLon/2);
+		 
+	var c=2*Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+
+	var dKm=R*c; // Distance in km
+	
+	var [capStr, capASuivre]=bearing(lat, lon);
+	return [dKm, capStr, capASuivre];
+}
+
+function deg2rad(deg){
+	return deg*(Math.PI/180);
+}
+
+
+
+// Converts from degrees to radians.
+function toRadians(degrees){
+	return degrees*Math.PI/180;
+}
+ 
+// Converts from radians to degrees.
+function toDegrees(radians) {
+	return radians*180/Math.PI;
+}
+
+
+function bearing(lat, lon){			// direction sur 360°
+
+    const toRadians = degrees => degrees * Math.PI / 180;
+    const toDegrees = radians => radians * 180 / Math.PI;
+
+    const φ1 = toRadians(lat);
+    const φ2 = toRadians(formLat);
+    const Δλ = toRadians(formLon-lon);
+
+    const y = Math.sin(Δλ) * Math.cos(φ2);
+    const x = Math.cos(φ1) * Math.sin(φ2) -
+              Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+
+    const θ = Math.atan2(y, x);
+    var valBearing = (toDegrees(θ) + 360) % 360; // Convert to degrees and normalize
+
+
+	var capStr="";
+	capStr=angleVersDirectionFine(valBearing);
+	//talk("Rose des vents à suivre : "+capStr);
+	//disp("Garder le cap en degrées : "+Math.round(valBearing, 0.0)+"°");
+	var capASuivre=Math.round(valBearing, 0.0);
+	return([capStr, capASuivre]);
+}
+
+
+
+function angleVersDirectionFine(degres) {
+  const directions = [
+    "Nord",             // 0°
+    "Nord-Nord-Est",    // 22.5°
+    "Nord-Est",         // 45°
+    "Est-Nord-Est",     // 67.5°
+    "Est",              // 90°
+    "Est-Sud-Est",      // 112.5°
+    "Sud-Est",          // 135°
+    "Sud-Sud-Est",      // 157.5°
+    "Sud",              // 180°
+    "Sud-Sud-Ouest",    // 202.5°
+    "Sud-Ouest",        // 225°
+    "Ouest-Sud-Ouest",  // 247.5°
+    "Ouest",            // 270°
+    "Ouest-Nord-Ouest", // 292.5°
+    "Nord-Ouest",       // 315°
+    "Nord-Nord-Ouest"   // 337.5°
+  ];
+
+  // Normaliser l’angle entre 0 et 360
+  degres = degres % 360;
+  if (degres < 0) degres += 360;
+
+  // Calculer l’indice (chaque secteur couvre 22.5°)
+  const index = Math.floor((degres + 11.25) / 22.5) % 16;
+
+  return directions[index];
+}
+
+
+
+
+
+
+/*===================
+AFFICHAGE DES BOUTONS
+====================*/
+
+function buttonDisplay(){
+	
+	var resHtml="";
+	
+	try{
+		var tableLabel=tablesRef[currentTable].etiquette;
+	}catch(e){
+		disp("⚠️ Définition pas encore connue. Veuillez attendre un peu.");
+		var tableLabel="Définition pas encore connue.";
+	}
+	resHtml+="<hr></hr><p><h1>Boutons d'actions de base pour la table : '"+tableLabel+"'</h1></p>";
+	resHtml+="<p>";
+	
+	resHtml+="<button onclick='btnAdd();'>Ajout</button>";
+	resHtml+="<button onclick='btnUpdate();'>Modification</button>";
+	resHtml+="<button onclick='btnDelete();'>Suppression d'une fiche</button>";
+	resHtml+="<button id='importButton' onclick='buttonDispImport();'>Importer un fichier de données</button>";		// se s'active pour éviter le rebondissement.
+	resHtml+="<button onclick='btnAddExport();'>Exporter une table dans un fichier externe</button>";
+	resHtml+="<button onclick='btnClearCurrentTable();'>Effacement de la table.</button>";
+	resHtml+="<button onclick='btnDeleteCurrentTable();'>Suppression de la table.</button>";
+	resHtml+="<button onclick='reorgGlobale();'>Réorganisation de la table.</button>";
+	resHtml+="<button onclick='countData();'>Calcul du nombre de fiche.</button>";
+
+	resHtml+="<hr></hr>";
+
+	resHtml+="<button onclick='clonage();'>Clonage de la base.</button>";
+
+	resHtml+="<button onclick='localStorage.setItem("+q+"majOk"+q+","+q+"false"+q+"); initDb();'>Mise à jour de la base</button>";
+	resHtml+="<button onclick='btnResetForm();'>Effacer le formulaire</button>";
+	resHtml+="<button onclick='btnClearMsg();'>Effacer la liste des messages</button>";
+	resHtml+="<button onclick='btnResetResearch();'>Effacer la liste de recherche</button>";
+	resHtml+="<button onclick='btnClearLastMsg();'>Effacer le dernier message</button>";
+	resHtml+="<button onclick='deleteDatabaseAwait();'>Suppression de la base de données</button>";
+	resHtml+="<button onclick='getDbUsed();'>Place disque disponible</button>";
+	resHtml+="<button onclick='btnGetGeo();'>Aquisition de la position</button>";
+	resHtml+="<button onclick='btnComputer();'>Calculatrice</button>";
+
+	resHtml+="<hr></hr>";
+	resHtml+="<hr></hr>";
+
+	resHtml+="<button onclick='calculerStats();'>Statistiques</button>";
+	
+	resHtml+="</p>";
+		
+	dispDiv("myButton",resHtml);
+}
+
+function loadMod(){
+	tablesRef=tablesMod;
+	fieldsRef=fieldsMod;
+
+}
+
+
+
+
+
+/*==========================
+EFFACE LA LISTE DES MESSAGES
+==========================*/
+
+function btnClearMsg(){
+	msgList=[];
+	countMsg=0;
+	dispDiv("messageDiv", "");
+}
+
+
+
+
+
+
+
+/*=====================
+PARLES LE MESSAGE VOCAL
+=====================*/
+
+
+function talk(m){
+
+	if(lastTalk==m){
+		return;
+	}
+	lastTalk=m;
+	disp("*"+m);
+	if(ttsOn){
+		if(!ttsNative(m)){
+			disp("Le synthétiseur vocal natif n'est pas pris en charge.");
+			ttsOn=false;
+		}
+	}
+}
+
+
+
+
+/*============================
+CORPS DE LA FONCTION DE PAROLE
+============================*/
+
+function ttsNative(m){
+
+	if("speechSynthesis" in window){
+		var u = new SpeechSynthesisUtterance();
+ 		u.text = m;
+ 		u.lang = 'fr-FR';
+ 		u.rate = 1.1;
+		try{
+   			speechSynthesis.speak(u);
+		}catch(e){i
+			disp(e);
+			return false;
+		}
+   		return true;
+   	}else{
+   		return false;
+	}
+}
+
+
+
+
+
+
+function buttonDispImport() {
+  const importButton = document.getElementById("importButton");
+  if (!importButton) {
+    disp("Le bouton 'importButton' est introuvable.");
+    return;
+  }
+
+  importButton.style.backgroundColor = "#ff9800";
+  importButton.style.color = "#fff";
+  importButton.disabled = true;
+  importButton.textContent = "Import en cours.";
+  
+  importerFichier()
+    .then(() => {
+      importButton.disabled = false;
+      importButton.textContent = "Importer";
+      importButton.style.removeProperty("background-color");
+      importButton.style.removeProperty("color");
+    })
+    .catch((error) => {
+      console.error("Erreur d'importation :", error);
+      importButton.disabled = false;
+      importButton.textContent = "Importer";
+      importButton.style.removeProperty("background-color");
+      importButton.style.removeProperty("color");
+    });
+}
+
+
+
+let importEnCours = false;
+
+function importerFichier() {
+  return new Promise((resolve, reject) => {
+    if (importEnCours) {
+      reject("Un import est déjà en cours.");
+      return;
+    }
+
+    const tableLabel = tablesRef[currentTable].etiquette;
+    const tableName = tablesRef[currentTable].nom;
+
+    dispDiv("fileImport", `<p>'${tableLabel}', sélectionner le fichier d'import <input type='file' id='fileImport' accept='.csv'></p>`);
+
+    const fileInput = document.getElementById('fileImport');
+
+    // Utilise onchange pour éviter les doublons
+    fileInput.onchange = (event) => {
+      const file = event.target.files[0];
+	  dispDiv("fileImport", "");
+	  
+	  //attendre(true, "Import en cours");
+	  
+	  const debut = performance.now();
+	  
+	  disp("Fichier="+file.name);
+	  
+      if (!file) {
+        reject("Aucun fichier sélectionné.");
+        return;
+      }
+
+      disp(`⚠️ Import de la table '${tableLabel}' en cours. Veuillez attendre qu'il se termine.`);
+      //attendre(true);
+
+      importEnCours = true;
+
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        const csvContent = e.target.result;
+        const lines = csvContent.split('\n');
+		
+	var linesLen=lines.length;
+	disp("Nombre de lignes prévues : "+linesLen);
+		
+       	const headers = lines[0].split(sepImport);
+		
+	var headersLen= headers.length;
+	disp("Nombre de colonnes prévues : "+headersLen);
+		
+        const data = [];
+
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (!line || line.startsWith("//")) continue;
+
+          const values = line.split(sepImport);
+          const obj = {};
+          headers.forEach((header, index) => {
+            obj[header] = values[index];
+          });
+          data.push(obj);
+        }
+
+        importToTable(data, debut)
+          .then(() => {
+            importEnCours = false;
+            resolve();
+          })
+          .catch((err) => {
+            importEnCours = false;
+            reject(err);
+          });
+      };
+
+      reader.onerror = () => {
+        importEnCours = false;
+        reject("Erreur de lecture du fichier.");
+      };
+
+      reader.readAsText(file);
+    };
+  });
+}
+
+
+
+function importToTable(data, debut) {
+  return new Promise((resolve, reject) => {
+
+		// Préparation de la transaction
+		const tableName    = tablesRef[currentTable].nom;
+		const tableLabel    = tablesRef[currentTable].etiquette;
+		
+		// Initialisation des compteurs
+		countLines=0;
+		const dataNbLines   = data.length;
+		
+		baseFullName = baseNamePrefix;
+		closeDb();
+
+	    //const version = Number(localStorage.getItem("dbVersion")) || 1;
+		const request = indexedDB.open(baseFullName);
+
+		request.onerror = () => disp("❌ Impossible d'ouvrir la BDD lors de l'importation (importToTable)");
+		request.onsuccess = (e) => {
+			var db = e.target.result;
+		
+			const transaction  = db.transaction(tableName, 'readwrite');
+			const store        = transaction.objectStore(tableName);
+		
+			disp("Nombre de lignes prévues dans le fichier : "+dataNbLines);
+		
+			var nbrAdd=0;
+		
+			// Promesse résolue lorsque la transaction se termine
+			transaction.oncomplete = () => {
+		
+				const fin = performance.now();
+				const tempsEnSecondes = (fin - debut) / 1000;
+				const lignesTotal = nbrAdd;
+				const lignesParSeconde = lignesTotal / tempsEnSecondes;
+
+				disp(`Import terminé en ${tempsEnSecondes.toFixed(2)}s`);
+				disp(`Vitesse : ${lignesParSeconde.toFixed(2)} lignes/secondes`);
+		
+				disp("Fin de l'import.");
+				chooseTable();
+				disp("✅ Nombre de ligne ajoutée : '" + nbrAdd + "'. Dans la table : '"+tableLabel+"'.");
+				attendre(false);
+			
+				resolve();
+			};
+		
+			transaction.onerror = () => {
+				reject(transaction.error);
+			};
+
+    			if(countLines){
+				disp("Evite le triple échantionnage.");
+				return;
+			}else{
+	
+				for (const item of data) {
+					// Nettoyage et parsing
+					let dataStr = JSON.stringify(item);
+					while (dataStr.includes("\\r")) {
+						dataStr = dataStr.replace("\\r", "");
+					}
+					const dataParsed   = JSON.parse(dataStr);
+					const pairs        = Object.entries(dataParsed);
+					const nouvelObjet  = {};
+
+					// Reconstruction de l’objet (trim + dateExtract)
+					pairs.forEach(([cle, valeur]) => {
+							const txt    = valeur.trim();
+							const dateF  = dateExtract(txt);
+							nouvelObjet[cle] = dateF === 0 ? txt : dateF;
+					});
+			
+					const requestAdd=store.add(nouvelObjet);
+					requestAdd.onsuccess = function(event) {
+						nbrAdd++;
+						countLines++;
+					};
+				};
+			}
+		};
+	});
+	closeDb();
+}
+
+
+
+
+
+function dateExtract(dataStr){
+
+	var dateFormat=0;
+	
+	var nbSep=0;
+	var jour=0;
+	var mois=0;                   
+	var annee=0;
+	var listSep=[];
+	for(var posChar=0; posChar<=dataStr.length; posChar++){
+		if(dataStr.slice(posChar, posChar+1)=="/"){
+			//disp("posChar="+posChar);
+			if(nbSep>2){
+				//disp("Nombre de séparateur de date supérieur à 2 !");
+				return 0;
+			}
+			nbSep++;
+			//disp("nbSep="+nbSep);
+			listSep.push(posChar);
+		}
+	}
+	if(nbSep!==2){
+		//disp("Nombre de séparateur de date différent de 2 ! nbSep="+nbSep);
+		return 0;
+	}else if(nbSep==2){
+		for(var noNbSep=0; noNbSep<=nbSep; noNbSep++){
+			if(noNbSep==0){
+				var posChar=listSep[noNbSep];
+				jour=Number(dataStr.slice(0, posChar));
+			}else if(noNbSep==1){
+				var posChar=listSep[noNbSep];
+				var posCharMoins=listSep[noNbSep-1];
+				mois=Number(dataStr.slice(posCharMoins+1, posChar));
+				var dataStrLen=dataStr.length;
+				annee=Number(dataStr.slice(posChar+1, dataStrLen));
+			}
+		}
+	}
+	if(jour&&mois&&annee){
+		//disp("annee="+annee+", mois="+mois+", jour="+jour+".");
+		dateFormat=formaterDate(annee, mois, jour);
+		//disp("dateFormat="+dateFormat);
+		return dateFormat;
+	}else{
+		//disp("Date invalide.");
+		return 0;
+	}
+}
+
+
+
+
+function formaterDate(annee, mois, jour) {
+  // Ajouter des zéros devant mois/jour si nécessaire
+  const mm = String(mois).padStart(2, '0');
+  const jj = String(jour).padStart(2, '0');
+  return `${annee}${mm}${jj}`;
+}
+
+
+
+
+/*====================
+CALCULATRICE À MÉMOIRE
+====================*/
+ 
+function btnComputer(){
+	dispDiv("computer", "<p>Calculatrice</p><input type=\"text\" id=\"computer\" onchange=\"btnComputer('computeInput');\"></input></p>");
+
+	const computer=document.getElementById("computer");
+
+    computer.addEventListener('change', (event) => {
+        const computeLine = event.target.value;
+        if (computeLine){
+			try{
+				const result=eval(computeLine);
+				result=Number(result);
+				disp("Calcul de "+computeLine +" équal à "+result);
+			}catch(e){
+				disp("Calcul de "+computeLine +" : Calcul erroné !");
+				return;
+			}
+			
+		}
+	});
+}
+
+
+
+
+
+
+/*=======================================
+CARRÉ MAGIQUE POUR LE GPS ET SA PRÉÇISION
+=======================================*/
+
+function btnMagicSquare(typeDePosition, currentLat, currentLon, magicSquare) {
+
+	const tableName=tablesRef[currentTable].nom;
+	
+	closeDb();
+	
+	baseFullName = baseNamePrefix;
+	var requestBase = indexedDB.open(baseFullName);
+	requestBase.onerror = (e) => disp("❌ Impossible d'ouvrir la BDD. "+e.message);
+	requestBase.onsuccess = (e) => {
+		var db = e.target.result;
+	
+		const transaction=db.transaction(tableName, "readonly");
+		const store=transaction.objectStore(tableName);
+
+	const minLat = parseFloat(currentLat - magicSquare);
+	const maxLat = parseFloat(currentLat + magicSquare);
+	const minLon = parseFloat(currentLon - magicSquare);
+	const maxLon = parseFloat(currentLon + magicSquare);
+
+	var squareResult=[];
+
+	store.openCursor().onsuccess = function(e) {
+		var cursor = e.target.result;
+		if (cursor) {
+			var data = cursor.value;
+			var lat = parseFloat(data.latitude);
+			var lon = parseFloat(data.longitude);
+
+			if (lat >= minLat && lat <= maxLat && lon >= minLon && lon <= maxLon) {
+				squareResult.push(data);
+			}
+			cursor.continue();
+		}else{
+			squareResultLen=squareResult.length;
+			if(!squareResult.length){
+				//disp("Aucune commune limitrophe.");
+				return;
+			}
+				
+			var squareListStr="";
+			var resHtml="<table border=1>"+typeDePosition+", +/- "+magicSquare+" °.";
+			resHtml+="<tr>";
+			for(itemSquare in squareResult){
+				
+				var sqrLat=squareResult[itemSquare].latitude;
+				var sqrLon=squareResult[itemSquare].longitude;
+				var [dKm, capStr, capASuivre]=kmFrom2LatLonPoints(sqrLat, sqrLon);
+				if(dKm==0){
+					capStr="Sur place";
+				}
+
+				var squareNomCommunePostal=squareResult[itemSquare].nomCommunePostal;
+					
+				resHtml+="<tr>";
+				resHtml+="<td>"+squareNomCommunePostal+"</td>";
+				resHtml+="<td>"+Math.floor(dKm,0.01)+" Km</td>";
+					
+				if(dKm==0){
+					resHtml+="<td class=blink>"+capStr+"</td>";
+				}else{
+					resHtml+="<td>"+capStr+"</td>";
+				}
+				resHtml+="<td>"+capASuivre+"°</td>";
+
+				resHtml+="</tr>";
+			}
+			resHtml+="</tr>";
+			resHtml+="</table>";
+			disp(resHtml);
+		}
+		};
+	};
+}
+
+
+
+
+
+
+
+
+
+
+function initRowArray() {
+	tablesRef=[];
+	fieldsRef=[[]];
+	for(var indRow=0; indRow<=NbrOfRowMax; indRow++){
+		fieldsRef.push([]);
+	}
+}
+
+
+
+/*
+async function getRefFromDatabaseAsync() {
+  // utilitaires pour IndexedDB
+  function openDB(name, version) {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(name, version);
+      req.onerror = evt => reject(evt);
+      req.onsuccess = evt => resolve(evt.target.result);
+      req.onblocked = () => reject(new Error('indexedDB open blocked'));
+    });
+  }
+
+  function getAllFromStore(db, storeName) {
+    return new Promise((resolve, reject) => {
+      let tx;
+      try {
+        tx = db.transaction(storeName, 'readonly');
+      } catch (err) {
+        reject(err);
+        return;
+      }
+      const store = tx.objectStore(storeName);
+      const req = store.getAll();
+      req.onerror = evt => reject(evt);
+      req.onsuccess = evt => resolve(evt.target.result || []);
+    });
+  }
+
+  // préparation
+  initRowArray();
+  const baseFullName = baseNamePrefix;
+  closeDb();
+
+  let db;
+  try {
+    db = await openDB(baseFullName);
+
+    // lire les "tables"
+    const tableStoreName = tablesMod[0].nom;
+    const tablesAll = await getAllFromStore(db, tableStoreName);
+    // s'assurer d'avoir un tableau même vide
+    const tablesRef = Array.isArray(tablesAll) ? tablesAll.slice() : [];
+
+    // initialiser fieldsRef comme tableau d'array correspondants aux tablesRef
+    const fieldsRef = tablesRef.map(() => []);
+
+    // lire les "fields"
+    const fieldStoreName = tablesMod[1].nom;
+    const fieldsAll = await getAllFromStore(db, fieldStoreName);
+
+    // regrouper les champs par nom de table (versTable)
+    for (let i = 0; i < fieldsAll.length; i++) {
+      const field = fieldsAll[i];
+      const targetTableName = field.versTable;
+      // trouver l'index de la table correspondante dans tablesRef
+      const tableIndex = tablesRef.findIndex(t => t && t.nom === targetTableName);
+      if (tableIndex !== -1) {
+        fieldsRef[tableIndex].push(field);
+        disp("Push miam miam ! : listField[itemField="+ i +"]="+ JSON.stringify(field));
+      } else {
+        // si la table n'existe pas, ignorer (comportement proche de l'original)
+        continue;
+      }
+    }
+
+    // filtrer tables sans champs (si vous voulez supprimer tables sans champs,
+    // on doit garder correspondance index -> table; l'original supprimait tableaux vides de fieldsRef)
+    const filteredFieldsRef = fieldsRef.filter(el => !(Array.isArray(el) && el.length === 0));
+
+    // suppression sécurisée des idInstance
+    try {
+      for (let t = 0; t < tablesRef.length; t++) {
+        if (tablesRef[t] && tablesRef[t].hasOwnProperty('idInstance')) {
+          delete tablesRef[t].idInstance;
+        }
+      }
+      for (let t = 0; t < fieldsRef.length; t++) {
+        const arr = fieldsRef[t];
+        if (Array.isArray(arr)) {
+          for (let f = 0; f < arr.length; f++) {
+            if (arr[f] && arr[f].hasOwnProperty('idInstance')) {
+              delete arr[f].idInstance;
+            }
+          }
+        }
+      }
+    } catch (err) {
+      // ne pas bloquer pour des suppressions non critiques
+    }
+
+    return { tablesRef, fieldsRef: filteredFieldsRef };
+  } finally {
+    if (db && typeof db.close === 'function') db.close();
+  }
+}
+*/
+
+
+
+
+async function enterDefinitionMode() {
+  disp("// fermer et libérer toute instance locale avant changement de version");
+  try {
+    if (dbInstance) {
+      try { dbInstance.onversionchange = null; } catch(e) {}
+      try { dbInstance.close(); } catch(e) {}
+      dbInstance = null;
+    }
+  } catch (e) {
+    disp("Erreur lors de la fermeture avant mode définition : " + e.message);
+  }
+
+  disp("// attendre un court délai pour permettre la fin des transactions en cours");
+  await new Promise(res => setTimeout(res, 120));
+
+  disp("// maintenant lancer initDb() ou la logique qui fait l'upgrade");
+  try {
+    await initDb();
+  } catch (err) {
+    disp("Impossible d'initialiser la DB en mode définition : " + (err && err.message ? err.message : err));
+  }
+}
+
+
+
+
+
+
+async function getRefFromDatabaseAsync() {
+
+	await enterDefinitionMode();
+
+	disp("Entrée dans getRefFromDatabase()");
+
+	var countLinesTable=0;
+	var countLinesToTable=0;
+
+	initRowArray();
+		
+	baseFullName=baseNamePrefix;
+	closeDb();
+		
+	request = indexedDB.open(baseFullName);
+	
+	request.onerror = function (evt){
+		return;
+	};
+	
+	request.oncomplete = function(e) {
+
+		disp("getRefFromDatabase request.oncomplete ok");
+	};
+
+	
+	
+	request.onsuccess = function (event){
+	
+		disp("getRefFromDatabase request.onsuccess ok");
+
+		var db = event.target.result;
+		
+		var tableNameTable=tablesMod[0].nom;
+		var tableLabelTable=tablesMod[0].etiquette;
+	
+		var transactionTable = db.transaction(tableNameTable, "readonly");
+		var objectStoreTable = transactionTable.objectStore(tableNameTable);
+		var requestTable = objectStoreTable.getAll();
+
+		requestTable.onerror= function(eventTable) {
+			
+		};
+
+		
+
+		requestTable.oncomplete = function(e) {
+
+			disp("getRefFromDatabase requestTable.oncomplete ok");
+		};
+		
+		requestTable.onsuccess = function(eventTable) {
+
+			disp("getRefFromDatabase requestTable.onsuccess ok");
+			var cursorTable = eventTable.target.result;
+			countLinesTable++;
+
+			if (cursorTable) {
+				tablesRef=cursorTable;
+				disp("getRefFromDatabase tablesRef="+JSON.stringify(tablesRef));
+
+			}
+
+			closeDb();
+			var requestFieldAll = indexedDB.open(baseFullName);
+	
+			requestFieldAll.onerror = function (evt){
+				return;
+			};
+	
+			requestFieldAll.onsuccess = function (eventFieldAll){
+				var db = eventFieldAll.target.result;	
+				
+				var tableNameMod=tablesMod[1].nom;
+				var tableLabelMod=tablesMod[1].etiquette;
+
+				const transactionFieldAll= db.transaction(tableNameMod, "readonly");
+				const objectStoreFieldAll = transactionFieldAll.objectStore(tableNameMod);
+				var requestFieldGetAll = objectStoreFieldAll.getAll();
+				
+				disp("getRefFromDatabase transactionFieldAll="+JSON.stringify(transactionFieldAll));
+				
+				requestFieldGetAll.onerror=function(eventFieldGetAll) {
+					return;
+				};
+				
+				requestFieldGetAll.oncomplete = function(e){
+					disp("requestFieldGetAll() oncomplete ok)");
+				};
+
+				requestFieldGetAll.onsuccess = function(eventFieldGetAll){
+
+				disp("getRefFromDatabase requestFieldGetAll.onsuccess ok");
+				
+
+					var cursorFieldGetAll = eventFieldGetAll.target.result;
+					if (cursorFieldGetAll){
+						var listToTable=[];
+						for(var itemFieldToTable in cursorFieldGetAll){
+							listToTable.push(cursorFieldGetAll[itemFieldToTable].versTable);
+						}
+						const fieldListToTableUnique = listToTable.filter((item, index) => listToTable.indexOf(item) === index);
+												
+						var listField=[];
+						for(var itemFieldToTable in cursorFieldGetAll){
+							listField.push(cursorFieldGetAll[itemFieldToTable]);
+						}
+						
+						for(var itemListField in listField){
+							var fieldToTable=listField[itemListField].versTable;
+							for(var itemFieldListToTableUnique in fieldListToTableUnique){
+								if(!tablesRef[itemFieldListToTableUnique]){
+									continue;
+								}
+								if(fieldToTable==tablesRef[itemFieldListToTableUnique].nom){
+									fieldsRef[itemFieldListToTableUnique].push(listField[itemListField]);
+								}
+							}
+						}
+
+						for(var noTable in tablesRef){
+							delete tablesRef[noTable].idInstance;
+							for(var noField in fieldsRef){
+								try{
+									delete fieldsRef[noTable][noField].idInstance;
+								}catch(e){
+									continue;
+								}
+							}
+						}
+			
+						var table = fieldsRef;
+						fieldsRef=table.filter(el => !(Array.isArray(el) && el.length === 0));
+						
+						disp("tablesRef="+JSON.stringify(tablesRef));
+						disp("fieldsRef="+JSON.stringify(fieldsRef));
+	
+						closeAllDb();
+						initDb();
+	
+						selectTable=0;
+						chooseTable();
+						
+						formWrite();
+						buttonDisplay();
+					}
+				};
+			};
+		};
+	};
+}
+
+ 
+ 
+ /**
+ * closeAllDb(connections, options)
+ *
+ * - connections: tableau d'objets connexion (clients, pools, ORM, etc.)
+ * - options:
+ *    - timeoutMs: délai max en ms pour chaque fermeture (par défaut 5000)
+ *    - retry: nombre de tentatives en cas d'échec (par défaut 0)
+ *    - logger: fonction(message, level) optionnelle pour logs
+ *
+ * Retourne: Promise<{results: Array<{connIndex:number, ok:boolean, error?:Error}>}>
+ */
+
+async function closeAllDb(connections = [], options = {}) {
+  const {
+    timeoutMs = 5000,
+    retry = 0,
+    logger = (msg) => {}
+  } = options;
+
+  if (!Array.isArray(connections)) throw new TypeError('connections doit être un tableau');
+
+  const callCloseMethod = (conn) => {
+    if (!conn) return Promise.reject(new Error('connexion invalide'));
+    disp("// Méthodes courantes");
+    if (typeof conn.close === 'function') return conn.close();
+    if (typeof conn.end === 'function') return conn.end();
+    if (typeof conn.destroy === 'function') return conn.destroy();
+    if (typeof conn.disconnect === 'function') return conn.disconnect();
+    disp("// Sequelize / knex specific: .close or .destroy already covered");
+    return Promise.reject(disp('aucune méthode de fermeture reconnue'));
+  };
+
+  const withTimeout = (p, ms) => {
+    return new Promise((resolve, reject) => {
+      let done = false;
+      const timer = setTimeout(() => {
+        if (done) return;
+        done = true;
+        reject(disp(`timeout après ${ms} ms`));
+      }, ms);
+      Promise.resolve(p)
+        .then((v) => {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          resolve(v);
+        })
+        .catch((err) => {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          reject(err);
+        });
+    });
+  };
+
+  const tryCloseWithRetries = async (conn, idx) => {
+    let attempt = 0;
+    while (attempt <= retry) {
+      try {
+        attempt++;
+        disp(`closing connection ${idx}, attempt ${attempt}`);
+        disp("// callCloseMethod may return void or a promise");
+        const result = callCloseMethod(conn);
+        await withTimeout(result, timeoutMs);
+        disp(`closed connection ${idx} succeed`);
+        return { connIndex: idx, ok: true };
+      } catch (err) {
+        disp(`close connection ${idx} failed on attempt ${attempt}: ${err.message}`);
+        if (attempt > retry) {
+          return { connIndex: idx, ok: false, error: err };
+        }
+        disp("// small backoff");
+        await new Promise(res => setTimeout(res, 100 * attempt));
+      }
+    }
+  };
+
+  const promises = connections.map((c, i) => tryCloseWithRetries(c, i));
+  const results = await Promise.all(promises);
+  return { results };
+}
+
+ 
+ 
+ 
+
+
+
+
+/*================================================
+Détermine si le navigateur est connecté à Internet
+==================================================
+*/
+
+function navOnline(){
+	var response=navigator.onLine;
+	if(response==true){
+		disp("Connexion Internet active");
+	}else if(response==false){
+		disp("Connexion Internet déactivée");
+	}
+}
+
+
+
+function afficherDateHeure() {
+	const maintenant = new Date();
+	const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', 
+          hour: '2-digit', minute: '2-digit', second: '2-digit' };
+    dispDiv("dateEtHeure", "<h2>"+maintenant.toLocaleDateString("fr-FR", options)+"</h2>");
+
+}
+setInterval(afficherDateHeure, 1000); // Met à jour chaque secondes
+
+
+
+
+
+
+
+
+
+function calculerStats(){
+
+	var tableName=tablesRef[currentTable].nom;
+	var tableLabel=tablesRef[currentTable].etiquette;
+
+	var resHtml="";
+	
+	resHtml+="<hr></hr>";
+	
+	resHtml+="<p class='blink'><h2>Statisques sur la table '"+tableLabel+"'</h2></p>";
+	
+	resHtml+="<p>Date début : "+"<input type='date' id='dateDebut'></p>";
+	resHtml+="<p>Date fin : "+"<input type='date' id='dateFin'></p>";
+	resHtml+="<p>Champ d'index (critère) : "+"<input type='text' id='champIndex'></p>";
+	resHtml+="<p>Champ à totaliser : "+"<input type='text' id='champToSum'></p>";
+	resHtml+="<p>Unité du résultat : "+"<input type='text' id='unitValue'></p>";
+	
+	resHtml+="<button onclick='computeStats()';>Calculer les statistiques</button>";
+
+
+	dispDiv("statsGetInfo", resHtml);
+
+	//resHtml="<canvas id='graph' width='600' height='300'></canvas>";
+	//dispDiv("statsResult", resHtml);
+}
+
+
+function getDiv(divId){
+
+	var divValue="";
+	try{
+		divValue=document.getElementById(divId).value;
+		disp("divValue='"+divValue+"', divId='"+divId+"'");
+	}catch(e){
+		//disp("getDiv, l'élément d'ident : "+divId+", inconnu.");
+		divValue="";
+	}
+	return(divValue);
+}
+
+
+function convertirDate(yyyymmdd) {
+  if (yyyymmdd.length !== 8) return "Format invalide";
+
+  const annee = yyyymmdd.slice(0, 4);
+  const mois  = yyyymmdd.slice(4, 6);
+  const jour  = yyyymmdd.slice(6, 8);
+
+  return `${jour}/${mois}/${annee}`;
+}
+
+	
+function computeStats(){
+
+	var tableName=tablesRef[currentTable].nom;
+	var labelName=tablesRef[currentTable].etiquette;
+	
+	var dateDebut = new Date(getDiv("dateDebut"));
+	var dateFin = new Date(getDiv("dateFin"));
+
+	var champIndex=getDiv("champIndex");
+	var champToSum=getDiv("champToSum");
+	
+	var unitValue=getDiv("unitValue");
+	
+	var statsResult=getDiv("statsResult");
+
+
+	closeDb();
+
+	var requestSource = indexedDB.open(baseFullName);
+	requestSource.onerror = () => disp("❌ Impossible d'ouvrir la base de données.");
+	requestSource.onsuccess = (e) => {
+		const db = event.target.result;
+
+		var transaction = db.transaction(tableName, "readonly");
+		var store = transaction.objectStore(tableName);
+		var req = store.getAll();
+
+		req.onsuccess = () => {
+			const data = req.result.filter(item => {
+					const dateStr=convertirDate(item[champIndex]);
+					//disp("datestr="+dateStr);
+					const d = new Date(convertirDate(item[champIndex]));
+					return d >= dateDebut && d <= dateFin;
+			});
+
+			const total = data.length;
+			let sum = 0;
+			let values = [], labels = [];
+
+			data.forEach((item, i) => {
+					const val = parseFloat(item[champToSum] || 0);
+					sum += val;
+					values.push(val);
+					labels.push(item[champToSum] || i);
+			});
+
+			const moyenne = (sum / total || 0).toFixed(2);
+		
+			var resHtml="";
+			resHtml+="<p>Table : "+tableLabel+"</p>";
+			resHtml+="<p>Champ d'index : "+champIndex+"</p>";
+			resHtml+="<p>Champ à sommer : "+champToSum+"</p>";
+			resHtml+="<p>Valeur d'unité : "+unitValue+"</p>";
+
+			resHtml+="<br></br>";
+
+			resHtml+="<p>📅 Date du : "+dateDebut.toLocaleDateString()+"</p>";
+			resHtml+="<p>📅 Au : "+dateFin.toLocaleDateString()+"</p>";
+			resHtml+="<p>🔢 Total : "+total+" fiche(s)</p>";
+			resHtml+="<p>➕ Somme : "+sum.toFixed(2)+" "+unitValue+"</p>";
+			resHtml+="<p>📍 Moyenne : "+moyenne+", somme de '"+champToSum+" "+unitValue+", divisé par le total de fiche(s)</p>";
+
+			resHtml+="<br></br>";
+		
+			dispDiv("statsResult", resHtml);
+
+			//dessinerGraphique(values, labels, statsResult);
+		};
+	};
+}
+
+
+
+/*
+
+function dessinerGraphique(data, labels, statsResult) {
+      //⚙️ Nettoyer le canvas
+	var canvas=getDiv("graph");
+    var ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // 📐 Paramètres du graphique
+      const max = Math.max(...data);
+      const stepX = canvas.width / data.length;
+      const heightFactor = (canvas.height - 20) / max;
+
+      ctx.fillStyle = "#3498db";
+      ctx.font = "12px sans-serif";
+
+      data.forEach((val, i) => {
+        const x = i * stepX;
+        const h = val * heightFactor;
+        ctx.fillRect(x + 2, canvas.height - h, stepX - 4, h);
+        ctx.fillText(val.toFixed(1), x + 2, canvas.height - h - 5);
+      });
+}
+*/
+
+
+
+
+
+/*
+// Reconnaissance comportementale clavier //
+
+const buffer = [];
+const downTimes = new Map();
+const USERS = [];
+const X = [], Y = [];
+const INPUT_DIM = 20, HIDDEN = 32;
+let model;
+const DB_NAME = "KeystrokeDB";
+const STORE_NAME = "ModelStore";
+
+
+document.addEventListener('keydown', (e) => {
+  if (e.repeat) return;
+  downTimes.set(e.code, performance.now());
+});
+
+document.addEventListener('keyup', (e) => {
+  const now = performance.now();
+  const down = downTimes.get(e.code);
+  if (down != null) {
+    buffer.push({ code: e.code, tsDown: down, tsUp: now, dwell: now - down });
+    downTimes.delete(e.code);
+  }
+});
+
+function featuresFromBuffer(buf) {
+  if (buf.length < 2) return null;
+  const dwells = buf.map(b => b.dwell);
+  const flights = [];
+  for (let i = 0; i < buf.length - 1; i++) {
+    flights.push(buf[i + 1].tsDown - buf[i].tsUp);
+  }
+  const all = dwells.concat(flights);
+  const mean = all.reduce((a,b)=>a+b,0)/all.length;
+  const std = Math.sqrt(all.reduce((a,b)=>a+(b-mean)**2,0)/(all.length-1)) || 1;
+  const maxLen = INPUT_DIM;
+  const x = [];
+  for (let i = 0; i < maxLen; i++) {
+    let v = i < dwells.length ? dwells[i] :
+            i < dwells.length + flights.length ? flights[i - dwells.length] : 0;
+    x.push((v - mean) / std);
+  }
+  return x;
+}
+
+function resetBuffer() { buffer.length = 0; }
+
+function addSample(userName) {
+  if (!userName) return log("❌ Nom requis.");
+  if (!USERS.includes(userName)) USERS.push(userName);
+  const idx = USERS.indexOf(userName);
+  const xArr = featuresFromBuffer(buffer);
+  resetBuffer();
+  if (!xArr) return log("❌ Frappe trop courte.");
+  X.push(new Float32Array(xArr));
+  const y = new Float32Array(USERS.length);
+  y[idx] = 1;
+  Y.push(y);
+  log(`✅ Échantillon ajouté pour ${userName}. Total: ${X.length}`);
+}
+
+function trainModel() {
+  if (X.length < 2) return log("❌ Pas assez d'échantillons.");
+  model = new MLP(INPUT_DIM, HIDDEN, USERS.length, 'multiclass');
+  for (let ep = 1; ep <= 50; ep++) {
+    let loss = 0;
+    for (let i = 0; i < X.length; i++) {
+      const pred = model.forward(X[i]);
+      for (let j = 0; j < USERS.length; j++) {
+        const p = Math.max(1e-9, Math.min(1 - 1e-9, pred[j]));
+        loss += -Y[i][j] * Math.log(p);
+      }
+      model.backward(pred, Y[i]);
+      model.step(0.01);
+    }
+    if (ep % 10 === 0) log(`📚 Epoch ${ep} | Loss: ${(loss / X.length).toFixed(4)}`);
+  }
+  log("✅ Entraînement terminé.");
+}
+
+function predictUser() {
+  if (!model) return log("❌ Modèle non entraîné.");
+  const xArr = featuresFromBuffer(buffer);
+  resetBuffer();
+  if (!xArr) return log("❌ Frappe trop courte.");
+  const pred = model.forward(new Float32Array(xArr));
+  let best = -1, idx = -1;
+  for (let j = 0; j < pred.length; j++) {
+    if (pred[j] > best) { best = pred[j]; idx = j; }
+  }
+  log(`🔍 Prédit : ${USERS[idx]} (confiance ${(best*100).toFixed(1)}%)`);
+}
+
+function saveModelToDb() {
+  if (!db || !model) return log("❌ DB ou modèle non disponible.");
+  const tx = db.transaction(STORE_NAME, "readwrite");
+  const store = tx.objectStore(STORE_NAME);
+  const data = {
+    users: USERS,
+    l1: { W: Array.from(model.l1.W), b: Array.from(model.l1.b) },
+    l2: { W: Array.from(model.l2.W), b: Array.from(model.l2.b) }
+  };
+  store.put(data, "keystrokeModel");
+  log("✅ Modèle sauvegardé dans IndexedDB.");
+}
+
+function loadModelFromDb() {
+  if (!db) return log("❌ DB non disponible.");
+  const tx = db.transaction(STORE_NAME, "readonly");
+  const store = tx.objectStore(STORE_NAME);
+  const req = store.get("keystrokeModel");
+  req.onsuccess = (e) => {
+    const data = e.target.result;
+    if (!data) return log("❌ Aucun modèle trouvé.");
+    USERS.length = 0;
+    USERS.push(...data.users);
+    model = new MLP(INPUT_DIM, HIDDEN, USERS.length, 'multiclass');
+    model.l1.W.set(data.l1.W);
+    model.l1.b.set(data.l1.b);
+    model.l2.W.set(data.l2.W);
+    model.l2.b.set(data.l2.b);
+    log("✅ Modèle restauré depuis IndexedDB.");
+  };
+}
+
+function log(msg) {
+  const zone = document.getElementById("logKeystroke");
+  if (zone) zone.textContent += msg + "\n";
+}
+
+// Réseau de neurones minimal
+class Dense {
+  constructor(inDim, outDim, activation='relu') {
+    this.inDim = inDim; this.outDim = outDim; this.activation = activation;
+    const scale = Math.sqrt(2/inDim);
+    this.W = new Float32Array(inDim*outDim).map(() => randn()*scale);
+    this.b = new Float32Array(outDim);
+    this.vW = new Float32Array(this.W.length);
+    this.vb = new Float32Array(this.b.length);
+  }
+  forward(x) {
+    this.x = x;
+    this.z = new Float32Array(this.outDim);
+    for (let j = 0; j < this.outDim; j++) {
+      let s = this.b[j];
+      for (let i = 0; i < this.inDim; i++) {
+        s += this.W[j*this.inDim + i] * x[i];
+      }
+      this.z[j] = s;
+    }
+    if (this.activation === 'relu') {
+      this.a = this.z.map(v => Math.max(0, v));
+    } else if (this.activation === 'softmax') {
+      const m = Math.max(...this.z);
+      const exps = this.z.map(v => Math.exp(v - m));
+      const sum = exps.reduce((a,b)=>a+b,0);
+      this.a = exps.map(v => v / sum);
+    }
+    return this.a;
+  }
+  backward(gradOut) {
+    const gradZ = this.activation === 'relu'
+      ? this.z.map((v, i) => gradOut[i] * (v > 0 ? 1 : 0))
+      : gradOut;
+    this.gW = new Float32Array(this.W.length);
+    this.gb = new Float32Array(this.b.length);
+    const gradX = new Float32Array(this.inDim);
+    for (let j = 0; j < this.outDim; j++) {
+      const g = gradZ[j];
+      this.gb[j] += g;
+      for (let i = 0; i < this.inDim; i++) {
+        this.gW[j*this.inDim + i] += g * this.x[i];
+        gradX[i] += this.W[j*this.inDim + i] * g;
+      }
+    }
+    return gradX;
+  }
+  step(lr, momentum=0.9) {
+    for (let i = 0; i < this.W.length; i++) {
+      this.vW[i] = momentum*this.vW[i] - lr*this.gW[i];
+      this.W[i] += this.vW[i];
+    }
+    for (let i = 0; i < this.b.length; i++) {
+      this.vb[i] = momentum * this.vb[i] - lr * this.gb[i];
+      this.b[i] += this.vb[i];
+    }
+  }
+}
+*/
+
+
+
+/**
+ * zipUnzipLZ77 - Compression et décompression de chaîne avec LZ77 simplifié.
+ * @param {string} input - Chaîne à compresser ou décompresser.
+ * @param {"zip"|"unzip"} mode - "zip" pour compresser, "unzip" pour décompresser.
+ * @returns {string} - Chaîne compressée ou décompressée.
+ */
+ 
+ /*
+function zipUnzipLZ77(input, mode = "zip") {
+  if (mode === "zip") {
+    const windowSize = 255;
+    let out = "";
+    let i = 0;
+
+    while (i < input.length) {
+      let maxMatch = "";
+      let maxOffset = 0;
+
+      const start = Math.max(0, i - windowSize);
+      const window = input.slice(start, i);
+
+      for (let j = 0; j < window.length; j++) {
+        let k = 0;
+        while (
+          k + i < input.length &&
+          window[j + k] === input[i + k] &&
+          j + k < window.length
+        ) {
+          k++;
+        }
+        if (k > maxMatch.length) {
+          maxMatch = input.slice(i, i + k);
+          maxOffset = window.length - j;
+        }
+      }
+
+      if (maxMatch.length >= 4) {
+        out += `§${maxOffset},${maxMatch.length}§`;
+        i += maxMatch.length;
+      } else {
+        out += input[i];
+        i++;
+      }
+    }
+
+    return out;
+  }
+
+  if (mode === "unzip") {
+    let out = "";
+    let i = 0;
+
+    while (i < input.length) {
+      if (input[i] === "§") {
+        const end = input.indexOf("§", i + 1);
+        const token = input.slice(i + 1, end);
+        const [offset, length] = token.split(",").map(Number);
+        const start = out.length - offset;
+        out += out.slice(start, start + length);
+        i = end + 1;
+      } else {
+        out += input[i];
+        i++;
+      }
+    }
+
+    return out;
+  }
+  throw new Error('Mode doit être "zip" ou "unzip".');
+}
+
+*/
+
+/*
+function cloneIndexedDB(sourceName, cloneName) {
+  attendre(true, "Clonage en cours");
+  const openSource = indexedDB.open(sourceName);
+  openSource.onsuccess = function () {
+    const sourceDb = openSource.result;
+    const storeNames = Array.from(sourceDb.objectStoreNames);
+
+    const openClone = indexedDB.open(cloneName, sourceDb.version);
+    openClone.onupgradeneeded = function (e) {
+      const cloneDb = e.target.result;
+      storeNames.forEach(store => {
+        if (!cloneDb.objectStoreNames.contains(store)) {
+          const sourceStore = sourceDb.transaction(store, 'readonly').objectStore(store);
+          const keyPath = sourceStore.keyPath || undefined;
+          cloneDb.createObjectStore(store, { keyPath });
+        }
+      });
+    };
+
+    openClone.onsuccess = function () {
+      const cloneDb = openClone.result;
+      storeNames.forEach(store => {
+        const txSource = sourceDb.transaction(store, 'readonly');
+        const txClone = cloneDb.transaction(store, 'readwrite');
+        const sourceStore = txSource.objectStore(store);
+        const cloneStore = txClone.objectStore(store);
+
+        sourceStore.getAll().onsuccess = function (e) {
+          e.target.result.forEach(item => cloneStore.put(item));
+        };
+      });
+    };
+  };
+  attendre(false, "");
+}
+
+
+
+function clonage(){
+	baseFullName = baseNamePrefix;
+	cloneIndexedDB(baseFullName, baseFullName+"_clone");
+
+	indexedDB.open('tomBdb_clone').onsuccess = function (e) {
+ 		const db = e.target.result;
+  		disp('Stores clonés :'+Array.from(db.objectStoreNames));
+	};
+}
+*/
+
+
+
+
+function mailTo(destinataire, sujet, corps){
+
+	//const destinataire = "vassiliefft@gmail.com";
+	//const sujet = "Sujet du mail";
+	//const corps = "Bonjour,\nVoici le contenu du message.";
+
+	window.location.href = `mailto:${destinataire}?subject=${encodeURIComponent(sujet)}&body=${encodeURIComponent(corps)}`;
+}
+
+
+
+
+/*
+=====================================================================
+FIN DU SCRIPT
+=====================================================================
+*/
+	
+</script>
+
+<div id="dateEtHeure"></div>
+
+
+<div id="chooseSelect"></div>
+<div id="chooseTable"></div>
+<div id="totalCount"></div>
+
+<div id="session"></div>
+<div id="error"></div>
+
+<DIV id="baseSelect"></DIV>
+
+<div id="attente"></div>
+
+
+<DIV id="myForm"></DIV>
+
+<div id="nbrImport"></div>
+<div id="nbrExport"></div>
+
+<DIV id="lastMsg"></DIV>
+
+<DIV id="searchList"></DIV>
+<DIV id="printOutPut"></DIV>
+
+
+<DIV id="fileInputRef"></DIV>
+<DIV id="fileNameRef"></DIV>
+
+<DIV id="statsGetInfo"></DIV>
+<DIV id="statsResult"></DIV>
+
+<DIV id="fileImport"></DIV>
+<DIV id="fileImportName"></DIV>
+
+<DIV id="myButton"></DIV>
+<DIV id="myButtonRef"></DIV>
+
+<DIV id="fileImportRefJsonFields"></DIV>
+<DIV id="fileImportNameRefJsonFields"></DIV>
+
+<DIV id="progress"></DIV>
+<DIV id="myProgressCommit"></DIV>
+
+
+<DIV id="myMap"></DIV>
+
+<DIV id="myFormSearch"></DIV>
+<DIV id="myButtonSearch"></DIV>
+
+<DIV id="messageDiv" class="table-container"></DIV>
+
+
+<DIV id="divSepImport"></DIV>
+
+<DIV id="divSepExport"></DIV>
+
+<DIV id="inputFileView"></DIV>
+
+<DIV id="computer"></DIV>
+
+</body>
+</html>
